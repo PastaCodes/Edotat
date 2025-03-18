@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name" translatable="false">e@</string>
+    <string name="find_table_scan_qr_code">Scan the table\'s QR code</string>
+    <string name="find_table_search">Search restaurant by name</string>
+    <string name="find_table_near_me">Find restaurants near me</string>
+    <string name="find_table_set_preferred_method">Set as preferred method</string>
+    <string name="icon_clear_search">Clear search</string>
+    <string name="search_restaurants">Search restaurants...</string>
+</resources>
