@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -46,32 +45,64 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
+
+enum class FindTableMethod {
+    QR_CODE,
+    NEAR_ME,
+    SEARCH,
+}
+
+context(Context)
+private fun getPreferredMethod(): FindTableMethod? {
+    return FindTableMethod.SEARCH
+    /*
+    val preferences = getSharedPreferences(PREFERENCES_FILE_KEY, Context.MODE_PRIVATE)
+    val methodString = preferences.getString("findTablePreferredMethod", null)
+    return when(methodString) {
+        "qrCode" -> FindTableMethod.QR_CODE
+        "nearMe" -> FindTableMethod.NEAR_ME
+        "search" -> FindTableMethod.SEARCH
+        else -> null
+    }
+    */
+}
 
 context(Context)
 @Composable
-fun FindTable(innerPadding: PaddingValues) {
+fun ChooseMethodScreen(navController: NavController, innerPadding: PaddingValues, isInitial: Boolean = false) {
+    // TODO careful: preferences may be loaded sometime after the screen is shown
+    if (isInitial) {
+        when (getPreferredMethod()) {
+            FindTableMethod.QR_CODE -> navController.navigate(route = MainActivity.QrCode)
+            FindTableMethod.NEAR_ME -> navController.navigate(route = MainActivity.NearMe)
+            FindTableMethod.SEARCH -> navController.navigate(route = MainActivity.SearchRestaurant)
+            null -> { }
+        }
+    }
     Column(
         modifier = Modifier.padding(innerPadding).fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        FindTableHeader()
-        Spacer(Modifier.height(16.dp))
-        FindTableButtons()
-        Spacer(Modifier.height(32.dp))
-        FindTableSetPreferredMethod()
+        Header(large = true)
+        Spacer(modifier = Modifier.height(16.dp))
+        MethodButtons(navController)
+        Spacer(modifier = Modifier.height(32.dp))
+        SetPreferredMethod()
     }
 }
 
 @Composable
-fun FindTableHeader() {
+private fun Header(large: Boolean) {
     Column(
+        modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(32.dp),
+        verticalArrangement = Arrangement.spacedBy(if (large) 32.dp else 16.dp),
     ) {
         Text(
             text = "Hungry?",
-            fontSize = 60.sp,
+            fontSize = if (large) 60.sp else 40.sp,
         )
         Text(
             text = "Let's find your table.",
@@ -80,25 +111,26 @@ fun FindTableHeader() {
     }
 }
 
-data class FindTableButton(
+private data class MethodButton(
     val imageVector: ImageVector,
     @StringRes val textResId: Int,
+    val destination: Any,
 )
 
 context(Context)
 @Composable
-fun FindTableButtons() {
+private fun MethodButtons(navController: NavController) {
     Column(
         modifier = Modifier.width(300.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         listOf(
-            FindTableButton(Icons.Filled.QrCodeScanner, R.string.find_table_scan_qr_code),
-            FindTableButton(Icons.Filled.MyLocation, R.string.find_table_near_me),
-            FindTableButton(Icons.Filled.Search, R.string.find_table_search)
+            MethodButton(Icons.Filled.QrCodeScanner, R.string.find_table_scan_qr_code, MainActivity.QrCode),
+            MethodButton(Icons.Filled.MyLocation, R.string.find_table_near_me, MainActivity.NearMe),
+            MethodButton(Icons.Filled.Search, R.string.find_table_search, MainActivity.SearchRestaurant)
         ).forEach { button ->
             Button(
-                onClick = { },
+                onClick = { navController.navigate(route = button.destination) },
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(24.dp, 16.dp),
                 shape = MaterialTheme.shapes.medium,
@@ -126,7 +158,7 @@ fun FindTableButtons() {
 
 context(Context)
 @Composable
-fun FindTableSetPreferredMethod() {
+private fun SetPreferredMethod() {
     val (checkedState, onStateChange) = remember { mutableStateOf(false) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -150,9 +182,9 @@ fun FindTableSetPreferredMethod() {
 
 context(Context)
 @Composable
-fun FindTableBack() {
+private fun Back(navController: NavController) {
     TextButton(
-        onClick = { },
+        onClick = { navController.navigateUp() },
         shape = MaterialTheme.shapes.medium,
         contentPadding = PaddingValues(
             top = 8.dp,
@@ -178,21 +210,26 @@ fun FindTableBack() {
 
 context(Context)
 @Composable
-fun SearchRestaurant(innerPadding: PaddingValues) {
+fun SearchRestaurantScreen(navController: NavController, innerPadding: PaddingValues, isInitial: Boolean = false) {
+    val (query, onQueryChange) = remember { mutableStateOf("") }
     Column(
         modifier = Modifier.padding(innerPadding).padding(24.dp).fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        FindTableBack()
-        SearchRestaurantBar()
-        SearchRestaurantResults(TMP_RESULTS)
+        Back(navController)
+        if (true /* isInitial */) {
+            Spacer(modifier = Modifier.height(32.dp))
+            Header(large = false)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+        SearchBar(query, onQueryChange)
+        RestaurantResults(query)
     }
 }
 
 context(Context)
 @Composable
-fun SearchRestaurantBar() {
-    val (query, onQueryChange) = remember { mutableStateOf("") }
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
@@ -227,18 +264,41 @@ fun SearchRestaurantBar() {
     )
 }
 
-data class RestaurantResult(
+private data class RestaurantResult(
     val name: String,
     val address: String,
 )
 
+private fun getRestaurants(query: String): List<RestaurantResult> {
+    // TODO
+    return when (query) {
+        "gino" -> listOf(
+            RestaurantResult("Da Gino", "Via Marinara, 72"),
+        )
+        else -> listOf(
+            RestaurantResult("Da Gino", "Via Marinara, 72"),
+            RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+            RestaurantResult("Hot Kebab", "Via Salina, 41"),
+            RestaurantResult("Da Gino", "Via Marinara, 72"),
+            RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+            RestaurantResult("Hot Kebab", "Via Salina, 41"),
+            RestaurantResult("Da Gino", "Via Marinara, 72"),
+            RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+            RestaurantResult("Hot Kebab", "Via Salina, 41"),
+            RestaurantResult("Da Gino", "Via Marinara, 72"),
+            RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+            RestaurantResult("Hot Kebab", "Via Salina, 41"),
+        )
+    }
+}
+
 @Composable
-fun SearchRestaurantResults(results: List<RestaurantResult>) {
+private fun RestaurantResults(query: String) {
     LazyColumn (
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(4.dp),
     ) {
-        items(results) { result ->
+        items(getRestaurants(query)) { result ->
             OutlinedCard(
                 onClick = { },
                 modifier = Modifier.fillMaxWidth(),
@@ -274,18 +334,3 @@ fun SearchRestaurantResults(results: List<RestaurantResult>) {
         }
     }
 }
-
-val TMP_RESULTS = listOf(
-    RestaurantResult("Da Gino", "Via Marinara, 72"),
-    RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-    RestaurantResult("Hot Kebab", "Via Salina, 41"),
-    RestaurantResult("Da Gino", "Via Marinara, 72"),
-    RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-    RestaurantResult("Hot Kebab", "Via Salina, 41"),
-    RestaurantResult("Da Gino", "Via Marinara, 72"),
-    RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-    RestaurantResult("Hot Kebab", "Via Salina, 41"),
-    RestaurantResult("Da Gino", "Via Marinara, 72"),
-    RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-    RestaurantResult("Hot Kebab", "Via Salina, 41"),
-)
