@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,7 +33,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,33 +69,33 @@ data object FindTable {
         data object Search : Method(Navigation.Destination.FindTable.Method.Search) {
             context(Context)
             @Composable
-            fun Screen(navController: NavController, isInitial: Boolean = false) {
+            fun Screen(innerPadding: PaddingValues, navController: NavController, isInitial: Boolean = false) {
                 val (query, onQueryChange) = remember { mutableStateOf("") }
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                ) { innerPadding ->
-                    Column(
-                        modifier = Modifier.padding(innerPadding).padding(24.dp).fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Back(navController)
-                        if (isInitial) {
-                            Spacer(modifier = Modifier.height(32.dp))
-                            Header(large = false)
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-                        SearchBar(query, onQueryChange)
-                        RestaurantResults(query)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(24.dp)
+                        .consumeWindowInsets(innerPadding),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Back(navController)
+                    if (isInitial) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Header(large = false)
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
+                    SearchBar(query, onQueryChange)
+                    RestaurantResults(query, navController)
                 }
             }
 
             context(Context)
             @Composable
-            private fun SearchBar(query: String, onQueryChange: (String) -> Unit) {
+            private fun SearchBar(query: String, setQuery: (String) -> Unit) {
                 OutlinedTextField(
                     value = query,
-                    onValueChange = onQueryChange,
+                    onValueChange = setQuery,
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     leadingIcon = {
@@ -108,7 +108,7 @@ data object FindTable {
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(
-                                onClick = { onQueryChange("") },
+                                onClick = { setQuery("") },
                             ) {
                                 Icon(
                                     imageVector = Icons.Filled.Close,
@@ -156,14 +156,16 @@ data object FindTable {
             }
 
             @Composable
-            private fun RestaurantResults(query: String) {
+            private fun RestaurantResults(query: String, navController: NavController) {
                 LazyColumn (
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(4.dp),
                 ) {
                     items(getRestaurants(query)) { result ->
                         OutlinedCard(
-                            onClick = { },
+                            onClick = {
+                                navController.navigate(route = TODO())
+                            },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
@@ -200,30 +202,23 @@ data object FindTable {
         }
     }
 
-    fun Method?.toRoute() =
-        when (this) {
-            null -> Navigation.Destination.FindTable.ChooseMethod
-            else -> this.route
-        }
-
     object ChooseMethod {
         context(Context)
         @Composable
-        fun Screen(navController: NavController) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-            ) { innerPadding ->
-                Column(
-                    modifier = Modifier.padding(innerPadding).fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Header(large = true)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    MethodButtons(navController)
-                    Spacer(modifier = Modifier.height(32.dp))
-                    SetPreferredMethod()
-                }
+        fun Screen(innerPadding: PaddingValues, navController: NavController) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Header(large = true)
+                Spacer(modifier = Modifier.height(16.dp))
+                MethodButtons(navController)
+                Spacer(modifier = Modifier.height(32.dp))
+                SetPreferredMethod()
             }
         }
 
@@ -246,7 +241,9 @@ data object FindTable {
                     MethodButton(Icons.Filled.Search, R.string.find_table_search, Method.Search)
                 ).forEach { button ->
                     Button(
-                        onClick = { navController.navigate(route = button.method.route) },
+                        onClick = {
+                            navController.navigate(route = button.method.route)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(24.dp, 16.dp),
                         shape = MaterialTheme.shapes.medium,
@@ -319,7 +316,9 @@ data object FindTable {
     @Composable
     private fun Back(navController: NavController) {
         TextButton(
-            onClick = { navController.navigateUp() },
+            onClick = {
+                navController.navigateUp()
+            },
             shape = MaterialTheme.shapes.medium,
             contentPadding = PaddingValues(
                 top = 8.dp,

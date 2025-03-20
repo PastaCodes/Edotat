@@ -1,12 +1,14 @@
 package at.e
 
 import android.content.Context
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import at.e.ui.FindTable
 import at.e.ui.Loading
+import at.e.ui.slidingComposable
 import kotlinx.serialization.Serializable
 
 object Navigation {
@@ -33,26 +35,26 @@ object Navigation {
 
     context(Context)
     @Composable
-    fun Setup() {
+    fun Setup(innerPadding: PaddingValues) {
         val navController = rememberNavController()
         NavHost(
             navController = navController,
-            startDestination = Loading,
+            startDestination = Destination.Loading,
         ) {
             composable<Destination.Loading> {
-                Loading.Screen(navController)
+                Loading.Screen(innerPadding, navController)
             }
-            composable<Destination.FindTable.ChooseMethod> {
-                FindTable.ChooseMethod.Screen(navController)
+            slidingComposable<Destination.FindTable.ChooseMethod> {
+                FindTable.ChooseMethod.Screen(innerPadding, navController)
             }
-            composable<Destination.FindTable.Method.QrCode> {
+            slidingComposable<Destination.FindTable.Method.QrCode> {
                 // TODO
             }
-            composable<Destination.FindTable.Method.NearMe> {
+            slidingComposable<Destination.FindTable.Method.NearMe> {
                 // TODO
             }
-            composable<Destination.FindTable.Method.Search> {
-                FindTable.Method.Search.Screen(navController)
+            slidingComposable<Destination.FindTable.Method.Search> {
+                FindTable.Method.Search.Screen(innerPadding, navController)
             }
         }
     }
