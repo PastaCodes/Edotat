@@ -53,11 +53,11 @@ import at.e.R
 data object FindTable {
     sealed class Method(val route: (Boolean) -> Any) {
         companion object {
-            fun fromPreference(value: String?) =
+            fun fromPreference(value: Int?) =
                 when (value) {
-                    "qr_code" -> QrCode
-                    "near_me" -> NearMe
-                    "search" -> Search
+                    1 -> QrCode
+                    2 -> NearMe
+                    3 -> Search
                     else -> null
                 }
         }

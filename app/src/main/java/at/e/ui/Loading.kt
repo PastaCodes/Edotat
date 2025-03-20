@@ -14,8 +14,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import at.e.LoadPreference
 import at.e.Navigation
+import at.e.PreferenceKeys
+import at.e.loadPreference
 
 object Loading {
     context(Context)
@@ -35,8 +36,8 @@ object Loading {
         LaunchedEffect(preferredMethod) {
             when (val method = preferredMethod) {
                 is UiState.Loading -> {
-                    LoadPreference.string("find_table_preferred_method") {
-                        preferredMethod = UiState.Data(FindTable.Method.fromPreference("search"))
+                    loadPreference(PreferenceKeys.FindTablePreferredMethod) {
+                        preferredMethod = UiState.Data(FindTable.Method.fromPreference(it))
                     }
                 }
                 is UiState.Data -> {
