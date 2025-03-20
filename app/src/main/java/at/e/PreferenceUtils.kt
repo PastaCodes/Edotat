@@ -16,9 +16,10 @@ object PreferenceKeys {
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+@Suppress("UNCHECKED_CAST")
 suspend fun <T> Context.loadPreference(key: Preferences.Key<T>, defaultValue: T? = null, consumer: (T?) -> Unit) {
     withContext(Dispatchers.IO) {
         val value = dataStore.data.map { it[key] ?: defaultValue }.first()
-        consumer(value)
+        consumer(value as T)
     }
 }
