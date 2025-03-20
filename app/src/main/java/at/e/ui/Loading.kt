@@ -36,7 +36,7 @@ object Loading {
             when (val method = preferredMethod) {
                 is UiState.Loading -> {
                     LoadPreference.string("find_table_preferred_method") {
-                        preferredMethod = UiState.Data(FindTable.Method.fromPreference(it))
+                        preferredMethod = UiState.Data(FindTable.Method.fromPreference("search"))
                     }
                 }
                 is UiState.Data -> {
@@ -47,7 +47,7 @@ object Loading {
                     navController.navigate(Navigation.Destination.FindTable.ChooseMethod)
                     if (method.data != null) {
                         // Navigate to the preferred method screen
-                        navController.navigate(method.data.route)
+                        navController.navigate(method.data.route(true))
                     }
                 }
             }

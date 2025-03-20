@@ -51,7 +51,7 @@ import at.e.Navigation
 import at.e.R
 
 data object FindTable {
-    sealed class Method(val route: Any) {
+    sealed class Method(val route: (Boolean) -> Any) {
         companion object {
             fun fromPreference(value: String?) =
                 when (value) {
@@ -62,11 +62,11 @@ data object FindTable {
                 }
         }
 
-        data object QrCode : Method(Navigation.Destination.FindTable.Method.QrCode)
+        data object QrCode : Method(Navigation.Destination.FindTable.Method::QrCode)
 
-        data object NearMe : Method(Navigation.Destination.FindTable.Method.NearMe)
+        data object NearMe : Method(Navigation.Destination.FindTable.Method::NearMe)
 
-        data object Search : Method(Navigation.Destination.FindTable.Method.Search) {
+        data object Search : Method(Navigation.Destination.FindTable.Method::Search) {
             context(Context)
             @Composable
             fun Screen(innerPadding: PaddingValues, navController: NavController, isInitial: Boolean = false) {
@@ -242,7 +242,7 @@ data object FindTable {
                 ).forEach { button ->
                     Button(
                         onClick = {
-                            navController.navigate(route = button.method.route)
+                            navController.navigate(route = button.method.route(false))
                         },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(24.dp, 16.dp),

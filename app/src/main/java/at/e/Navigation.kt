@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import at.e.ui.FindTable
 import at.e.ui.Loading
 import at.e.ui.slidingComposable
@@ -22,13 +23,13 @@ object Navigation {
 
             object Method {
                 @Serializable
-                object QrCode
+                data class QrCode(val isInitial: Boolean = false)
 
                 @Serializable
-                object NearMe
+                data class NearMe(val isInitial: Boolean = false)
 
                 @Serializable
-                object Search
+                data class Search(val isInitial: Boolean = false)
             }
         }
     }
@@ -53,8 +54,9 @@ object Navigation {
             slidingComposable<Destination.FindTable.Method.NearMe> {
                 // TODO
             }
-            slidingComposable<Destination.FindTable.Method.Search> {
-                FindTable.Method.Search.Screen(innerPadding, navController)
+            slidingComposable<Destination.FindTable.Method.Search> { backStackEntry ->
+                val route = backStackEntry.toRoute<Destination.FindTable.Method.Search>()
+                FindTable.Method.Search.Screen(innerPadding, navController, isInitial = route.isInitial)
             }
         }
     }
