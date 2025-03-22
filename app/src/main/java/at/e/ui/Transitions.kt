@@ -15,16 +15,16 @@ object Transitions {
     val OutForward = slideOutHorizontally { -it } + fadeOut()
     val InBackward = slideInHorizontally { -it } + fadeIn()
     val OutBackward = slideOutHorizontally { it } + fadeOut()
-}
 
-inline fun <reified T : Any> NavGraphBuilder.slidingComposable(
-    noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit)
-) {
-    composable<T>(
-        enterTransition = { Transitions.InForward },
-        exitTransition = { Transitions.OutForward },
-        popEnterTransition = { Transitions.InBackward },
-        popExitTransition = { Transitions.OutBackward },
-        content = content,
-    )
+    inline fun <reified T : Any> NavGraphBuilder.slidingComposable(
+        noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit)
+    ) {
+        composable<T>(
+            enterTransition = { Transitions.InForward },
+            exitTransition = { Transitions.OutForward },
+            popEnterTransition = { Transitions.InBackward },
+            popExitTransition = { Transitions.OutBackward },
+            content = content,
+        )
+    }
 }

@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.e.Navigation
 import at.e.R
+import at.e.UserPreferences
 
 data object FindTable {
     sealed class Method(val route: (Boolean) -> Any) {
@@ -61,6 +63,13 @@ data object FindTable {
                     else -> null
                 }
         }
+
+        fun toPreference() =
+            when (this) {
+                QrCode -> 1
+                NearMe -> 2
+                Search -> 3
+            }
 
         data object QrCode : Method(Navigation.Destination.FindTable.Method::QrCode)
 
@@ -206,6 +215,8 @@ data object FindTable {
         context(Context)
         @Composable
         fun Screen(innerPadding: PaddingValues, navController: NavController) {
+            // State of the "set as preferred method" checkbox
+            val (checkedState, onStateChange) = remember { mutableStateOf(false) }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -216,9 +227,9 @@ data object FindTable {
             ) {
                 Header(large = true)
                 Spacer(modifier = Modifier.height(16.dp))
-                MethodButtons(navController)
+                MethodButtons(navController, checkedState)
                 Spacer(modifier = Modifier.height(32.dp))
-                SetPreferredMethod()
+                SetPreferredMethod(checkedState, onStateChange)
             }
         }
 
@@ -230,7 +241,8 @@ data object FindTable {
 
         context(Context)
         @Composable
-        private fun MethodButtons(navController: NavController) {
+        private fun MethodButtons(navController: NavController, checkedState: Boolean) {
+            val coroutineScope = rememberCoroutineScope()
             Column(
                 modifier = Modifier.width(300.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -242,7 +254,15 @@ data object FindTable {
                 ).forEach { button ->
                     Button(
                         onClick = {
-                            navController.navigate(route = button.method.route(false))
+                            if (checkedState) {
+                                with(coroutineScope) {
+                                    UserPreferences.save(
+                                        key = UserPreferences.Keys.FindTablePreferredMethod,
+                                        value = button.method.toPreference()
+                                    )
+                                }
+                            }
+                            navController.navigate(route = button.method.route(/* isInitial = */ false))
                         },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(24.dp, 16.dp),
@@ -271,8 +291,7 @@ data object FindTable {
 
         context(Context)
         @Composable
-        private fun SetPreferredMethod() {
-            val (checkedState, onStateChange) = remember { mutableStateOf(false) }
+        private fun SetPreferredMethod(checkedState: Boolean, onStateChange: (Boolean) -> Unit) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.toggleable(

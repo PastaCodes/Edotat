@@ -9,7 +9,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import at.e.ui.FindTable
 import at.e.ui.Loading
-import at.e.ui.slidingComposable
+import at.e.ui.Transitions.slidingComposable
 import kotlinx.serialization.Serializable
 
 object Navigation {
