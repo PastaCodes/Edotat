@@ -36,7 +36,7 @@ object Common {
         content: @Composable (PaddingValues, (Boolean) -> Unit) -> Unit,
     ) {
         val (bottomBarVisible, setBottomBarVisible) = remember { mutableStateOf(false) }
-        EdotatTheme {
+        EdotatTheme.Apply {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
                 bottomBar = { if (bottomBarVisible) BottomBar(navController) },

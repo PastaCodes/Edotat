@@ -168,6 +168,7 @@ data object FindTable {
             Text(
                 text = "Hungry?",
                 fontSize = if (large) 60.sp else 40.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
             Text(
                 text = "Let's find your table.",

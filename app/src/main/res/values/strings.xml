@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">e@</string>
     <string name="find_table_scan_qr_code">Scan the table\'s QR code</string>
