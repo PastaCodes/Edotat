@@ -16,11 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import at.e.Navigation
 import at.e.UserPreferences
+import at.e.ui.FindTable.Method.Companion.toRoute
 
 object Loading {
     context(Context)
     @Composable
-    fun Screen(innerPadding: PaddingValues, navController: NavController) {
+    fun Screen(navController: NavController, innerPadding: PaddingValues) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -31,24 +32,22 @@ object Loading {
             CircularProgressIndicator()
         }
 
-        var preferredMethod by UiState.remember<FindTable.Method?>()
-        LaunchedEffect(preferredMethod) {
-            when (val method = preferredMethod) {
+        var methodPreference by UiState.remember<Int>()
+        LaunchedEffect(methodPreference) {
+            when (val method = methodPreference) {
                 is UiState.Loading -> {
-                    UserPreferences.load(UserPreferences.Keys.FindTablePreferredMethod) {
-                        preferredMethod = UiState.Data(FindTable.Method.fromPreference(it))
+                    UserPreferences.load(
+                        key = UserPreferences.Keys.FindTablePreferredMethod,
+                        defaultValue = FindTable.Method.NO_PREFERENCE,
+                    ) {
+                        methodPreference = UiState.Data(it)
                     }
                 }
                 is UiState.Data -> {
-                    // Forget the loading screen
+                    val preferredMethod = FindTable.Method.fromPreference(method.data)
                     navController.popBackStack()
-                    // Add the ChooseMethod screen to the back stack, although we may redirect
-                    // to the preferred method screen
-                    navController.navigate(Navigation.Destination.FindTable.ChooseMethod)
-                    if (method.data != null) {
-                        // Navigate to the preferred method screen
-                        navController.navigate(method.data.route(true))
-                    }
+                    navController.navigate(route = Navigation.Destination.FindTable.ChooseMethod)
+                    navController.navigate(route = preferredMethod.toRoute(isInitial = true))
                 }
             }
         }

@@ -7,4 +7,7 @@
     <string name="icon_clear_search">Clear search</string>
     <string name="search_restaurants">Search restaurants…</string>
     <string name="find_table_back">Use a different method</string>
+    <string name="bottom_bar_home">Home</string>
+    <string name="bottom_bar_orders">Your Orders</string>
+    <string name="bottom_bar_account_and_settings">Settings</string>
 </resources>

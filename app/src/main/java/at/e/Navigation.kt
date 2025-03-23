@@ -3,9 +3,9 @@ package at.e
 import android.content.Context
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import at.e.ui.FindTable
 import at.e.ui.Loading
@@ -36,27 +36,35 @@ object Navigation {
 
     context(Context)
     @Composable
-    fun Setup(innerPadding: PaddingValues) {
-        val navController = rememberNavController()
+    fun Setup(
+        navController: NavHostController,
+        innerPadding: PaddingValues,
+        setBottomBarVisible: (Boolean) -> Unit,
+    ) {
         NavHost(
             navController = navController,
             startDestination = Destination.Loading,
         ) {
             composable<Destination.Loading> {
-                Loading.Screen(innerPadding, navController)
+                Loading.Screen(navController, innerPadding)
+                setBottomBarVisible(false) // Technically not necessary
             }
             slidingComposable<Destination.FindTable.ChooseMethod> {
-                FindTable.ChooseMethod.Screen(innerPadding, navController)
+                FindTable.ChooseMethod.Screen(navController, innerPadding)
+                setBottomBarVisible(true)
             }
             slidingComposable<Destination.FindTable.Method.QrCode> {
                 // TODO
+                setBottomBarVisible(true)
             }
             slidingComposable<Destination.FindTable.Method.NearMe> {
                 // TODO
+                setBottomBarVisible(true)
             }
             slidingComposable<Destination.FindTable.Method.Search> { backStackEntry ->
                 val route = backStackEntry.toRoute<Destination.FindTable.Method.Search>()
-                FindTable.Method.Search.Screen(innerPadding, navController, isInitial = route.isInitial)
+                FindTable.Method.Search.Screen(navController, innerPadding, route.isInitial)
+                setBottomBarVisible(true)
             }
         }
     }

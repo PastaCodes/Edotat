@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
@@ -53,168 +52,10 @@ import at.e.R
 import at.e.UserPreferences
 
 data object FindTable {
-    sealed class Method(val route: (Boolean) -> Any) {
-        companion object {
-            fun fromPreference(value: Int?) =
-                when (value) {
-                    1 -> QrCode
-                    2 -> NearMe
-                    3 -> Search
-                    else -> null
-                }
-        }
-
-        fun toPreference() =
-            when (this) {
-                QrCode -> 1
-                NearMe -> 2
-                Search -> 3
-            }
-
-        data object QrCode : Method(Navigation.Destination.FindTable.Method::QrCode)
-
-        data object NearMe : Method(Navigation.Destination.FindTable.Method::NearMe)
-
-        data object Search : Method(Navigation.Destination.FindTable.Method::Search) {
-            context(Context)
-            @Composable
-            fun Screen(innerPadding: PaddingValues, navController: NavController, isInitial: Boolean = false) {
-                val (query, onQueryChange) = remember { mutableStateOf("") }
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
-                        .padding(24.dp)
-                        .consumeWindowInsets(innerPadding),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Back(navController)
-                    if (isInitial) {
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Header(large = false)
-                        Spacer(modifier = Modifier.height(16.dp))
-                    }
-                    SearchBar(query, onQueryChange)
-                    RestaurantResults(query, navController)
-                }
-            }
-
-            context(Context)
-            @Composable
-            private fun SearchBar(query: String, setQuery: (String) -> Unit) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = setQuery,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = CircleShape,
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = null, // Icon is decorative
-                            modifier = Modifier.padding(start = 16.dp),
-                        )
-                    },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(
-                                onClick = { setQuery("") },
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = getString(R.string.icon_clear_search),
-                                    modifier = Modifier.padding(end = 12.dp),
-                                )
-                            }
-                        }
-                    },
-                    placeholder = {
-                        Text(
-                            text = getString(R.string.search_restaurants),
-                        )
-                    },
-                    singleLine = true,
-                )
-            }
-
-            private data class RestaurantResult(
-                val name: String,
-                val address: String,
-            )
-
-            private fun getRestaurants(query: String): List<RestaurantResult> {
-                // TODO
-                return when (query) {
-                    "gino" -> listOf(
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                    )
-                    else -> listOf(
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                    )
-                }
-            }
-
-            @Composable
-            private fun RestaurantResults(query: String, navController: NavController) {
-                LazyColumn (
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(4.dp),
-                ) {
-                    items(getRestaurants(query)) { result ->
-                        OutlinedCard(
-                            onClick = {
-                                navController.navigate(route = TODO())
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.height(86.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Restaurant,
-                                    contentDescription = null, // Icon is decorative
-                                    modifier = Modifier.padding(horizontal = 24.dp).size(32.dp),
-                                )
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Text(
-                                        text = result.name,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Text(
-                                        text = result.address,
-                                    )
-                                }
-                                Icon(
-                                    imageVector = Icons.Filled.ChevronRight,
-                                    contentDescription = null, // Icon is decorative
-                                    modifier = Modifier.padding(horizontal = 24.dp).size(24.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     object ChooseMethod {
         context(Context)
         @Composable
-        fun Screen(innerPadding: PaddingValues, navController: NavController) {
+        fun Screen(navController: NavController, innerPadding: PaddingValues) {
             // State of the "set as preferred method" checkbox
             val (checkedState, onStateChange) = remember { mutableStateOf(false) }
             Column(
@@ -239,6 +80,12 @@ data object FindTable {
             val method: Method,
         )
 
+        private val methodButtons = listOf(
+            MethodButton(Common.Icons.QrCodeScanner, R.string.find_table_scan_qr_code, Method.QrCode),
+            MethodButton(Common.Icons.MyLocation, R.string.find_table_near_me, Method.NearMe),
+            MethodButton(Common.Icons.Search, R.string.find_table_search, Method.Search)
+        )
+
         context(Context)
         @Composable
         private fun MethodButtons(navController: NavController, checkedState: Boolean) {
@@ -247,22 +94,20 @@ data object FindTable {
                 modifier = Modifier.width(300.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                listOf(
-                    MethodButton(Icons.Filled.QrCodeScanner, R.string.find_table_scan_qr_code, Method.QrCode),
-                    MethodButton(Icons.Filled.MyLocation, R.string.find_table_near_me, Method.NearMe),
-                    MethodButton(Icons.Filled.Search, R.string.find_table_search, Method.Search)
-                ).forEach { button ->
+                methodButtons.forEach { button ->
                     Button(
                         onClick = {
                             if (checkedState) {
                                 with(coroutineScope) {
                                     UserPreferences.save(
                                         key = UserPreferences.Keys.FindTablePreferredMethod,
-                                        value = button.method.toPreference()
+                                        value = button.method.toPreference(),
                                     )
                                 }
                             }
-                            navController.navigate(route = button.method.route(/* isInitial = */ false))
+                            navController.navigate(
+                                route = button.method.route(/* isInitial = */ false),
+                            )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(24.dp, 16.dp),
@@ -349,7 +194,7 @@ data object FindTable {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.ChevronLeft,
+                    imageVector = Common.Icons.ChevronLeft,
                     contentDescription = null, // Icon is decorative
                     modifier = Modifier.size(32.dp),
                 )
@@ -357,6 +202,176 @@ data object FindTable {
                     text = getString(R.string.find_table_back),
                     fontSize = 16.sp,
                 )
+            }
+        }
+    }
+
+    sealed class Method(val route: (Boolean) -> Any) {
+        companion object {
+            const val NO_PREFERENCE = 0
+
+            fun fromPreference(value: Int) =
+                when (value) {
+                    1 -> QrCode
+                    2 -> NearMe
+                    3 -> Search
+                    else -> null
+                }
+
+            fun Method?.toRoute(isInitial: Boolean = false) =
+                when (this) {
+                    null -> Navigation.Destination.FindTable.ChooseMethod
+                    else -> this.route(isInitial)
+                }
+        }
+
+        fun toPreference() =
+            when (this) {
+                QrCode -> 1
+                NearMe -> 2
+                Search -> 3
+            }
+
+        data object QrCode : Method(Navigation.Destination.FindTable.Method::QrCode)
+
+        data object NearMe : Method(Navigation.Destination.FindTable.Method::NearMe)
+
+        data object Search : Method(Navigation.Destination.FindTable.Method::Search) {
+            context(Context)
+            @Composable
+            fun Screen(
+                navController: NavController,
+                innerPadding: PaddingValues,
+                isInitial: Boolean = false
+            ) {
+                val (query, onQueryChange) = remember { mutableStateOf("") }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(24.dp)
+                        .consumeWindowInsets(innerPadding),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Back(navController)
+                    if (isInitial) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Header(large = false)
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                    SearchBar(query, onQueryChange)
+                    RestaurantResults(query, navController)
+                }
+            }
+
+            context(Context)
+            @Composable
+            private fun SearchBar(query: String, setQuery: (String) -> Unit) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = setQuery,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = CircleShape,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Common.Icons.Search,
+                            contentDescription = null, // Icon is decorative
+                            modifier = Modifier.padding(start = 16.dp),
+                        )
+                    },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(
+                                onClick = { setQuery("") },
+                            ) {
+                                Icon(
+                                    imageVector = Common.Icons.Close,
+                                    contentDescription = getString(R.string.icon_clear_search),
+                                    modifier = Modifier.padding(end = 12.dp),
+                                )
+                            }
+                        }
+                    },
+                    placeholder = {
+                        Text(
+                            text = getString(R.string.search_restaurants),
+                        )
+                    },
+                    singleLine = true,
+                )
+            }
+
+            private data class RestaurantResult(
+                val name: String,
+                val address: String,
+            )
+
+            private fun getRestaurants(query: String): List<RestaurantResult> {
+                // TODO
+                return when (query) {
+                    "gino" -> listOf(
+                        RestaurantResult("Da Gino", "Via Marinara, 72"),
+                    )
+                    else -> listOf(
+                        RestaurantResult("Da Gino", "Via Marinara, 72"),
+                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
+                        RestaurantResult("Da Gino", "Via Marinara, 72"),
+                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
+                        RestaurantResult("Da Gino", "Via Marinara, 72"),
+                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
+                        RestaurantResult("Da Gino", "Via Marinara, 72"),
+                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
+                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
+                    )
+                }
+            }
+
+            @Composable
+            private fun RestaurantResults(query: String, navController: NavController) {
+                LazyColumn (
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(4.dp),
+                ) {
+                    items(getRestaurants(query)) { result ->
+                        OutlinedCard(
+                            onClick = {
+                                navController.navigate(route = TODO())
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.height(86.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = Common.Icons.Restaurant,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier.padding(horizontal = 24.dp).size(32.dp),
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text = result.name,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Text(
+                                        text = result.address,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Common.Icons.ChevronRight,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier.padding(horizontal = 24.dp).size(24.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

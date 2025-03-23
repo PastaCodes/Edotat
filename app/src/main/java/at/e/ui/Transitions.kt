@@ -20,10 +20,10 @@ object Transitions {
         noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit)
     ) {
         composable<T>(
-            enterTransition = { Transitions.InForward },
-            exitTransition = { Transitions.OutForward },
-            popEnterTransition = { Transitions.InBackward },
-            popExitTransition = { Transitions.OutBackward },
+            enterTransition = { InForward },
+            exitTransition = { OutForward },
+            popEnterTransition = { InBackward },
+            popExitTransition = { OutBackward },
             content = content,
         )
     }
