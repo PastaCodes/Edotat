@@ -44,12 +44,14 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.e.Navigation
 import at.e.R
 import at.e.UserPreferences
+import at.e.backend.backendInterface
 
 data object FindTable {
     object ChooseMethod {
@@ -243,7 +245,7 @@ data object FindTable {
             fun Screen(
                 navController: NavController,
                 innerPadding: PaddingValues,
-                isInitial: Boolean = false
+                isInitial: Boolean = false,
             ) {
                 val (query, onQueryChange) = remember { mutableStateOf("") }
                 Column(
@@ -302,41 +304,13 @@ data object FindTable {
                 )
             }
 
-            private data class RestaurantResult(
-                val name: String,
-                val address: String,
-            )
-
-            private fun getRestaurants(query: String): List<RestaurantResult> {
-                // TODO
-                return when (query) {
-                    "gino" -> listOf(
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                    )
-                    else -> listOf(
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                        RestaurantResult("Da Gino", "Via Marinara, 72"),
-                        RestaurantResult("Cool Burgers", "Via Pomodoro, 64"),
-                        RestaurantResult("Hot Kebab", "Via Salina, 41"),
-                    )
-                }
-            }
-
             @Composable
             private fun RestaurantResults(query: String, navController: NavController) {
                 LazyColumn (
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(4.dp),
                 ) {
-                    items(getRestaurants(query)) { result ->
+                    items(backendInterface.getRestaurants(query)) { result ->
                         OutlinedCard(
                             onClick = {
                                 navController.navigate(route = TODO())
@@ -359,9 +333,13 @@ data object FindTable {
                                         text = result.name,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        text = result.address,
+                                        text = result.address.toString(),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                                 Icon(

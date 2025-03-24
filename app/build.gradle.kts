@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.preferences)
     implementation(libs.kotlinx.serialization)
     implementation(libs.android.material)
+    implementation(libs.fuzzywuzzy)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
