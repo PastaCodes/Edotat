@@ -2,7 +2,7 @@ package at.e.backend.faux
 
 import at.e.backend.BackendInterface
 import at.e.backend.Restaurant
-import at.e.lib.ObjectFuzzySearch
+import at.e.backend.faux.lib.ObjectFuzzySearch
 
 object FauxBackendInterface : BackendInterface {
     private val TO_STRINGS: (Restaurant) -> List<String> = { restaurant ->
@@ -14,8 +14,8 @@ object FauxBackendInterface : BackendInterface {
             restaurant.address.country,
         )
     }
-    private val WEIGHTS = listOf(5, 2, 3, 1, 1)
-    private const val CUTOFF = 50
+    private val WEIGHTS = listOf(3, 1, 2, 1, 1)
+    private const val CUTOFF = 5000
     private const val MAX_COUNT = 50
 
     override fun getRestaurants(query: String): List<Restaurant> =

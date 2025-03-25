@@ -55,7 +55,7 @@ dependencies {
     implementation(libs.androidx.preferences)
     implementation(libs.kotlinx.serialization)
     implementation(libs.android.material)
-    implementation(libs.fuzzywuzzy)
+    implementation(libs.fuzzywuzzy) // Required by faux backend
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

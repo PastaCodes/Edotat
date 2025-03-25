@@ -215,7 +215,7 @@ val RESTAURANTS = listOf(
     Restaurant("Kilauea", Address("Via Ravenna 4", "Lido di Savio", "Emilia-Romagna", "Italia"), Location(12.34663f, 44.30279f)),
     Restaurant("Kiosko Beach Piadina e Crescioni", Address("Via Puglie 3a", "Cervia", "Emilia-Romagna", "Italia"), Location(12.371801f, 44.2246f)),
     Restaurant("Km Mio", Address("Via Guidone 15", "Ravenna", "Emilia-Romagna", "Italia"), Location(12.199287f, 44.41618f)),
-    Restaurant("Koya Ravenna", Address("Via Trieste 210/D", "Ravenna", "Emilia-Romagna", "Italia"), Location(12.227032f, 44.424397f)),
+    Restaurant("Koya", Address("Via Trieste 210/D", "Ravenna", "Emilia-Romagna", "Italia"), Location(12.227032f, 44.424397f)),
     Restaurant("Kuzco", Address("Piazza XX Settembre 5", "Forlì", "Emilia-Romagna", "Italia"), Location(12.04287f, 44.221737f)),
     Restaurant("L'Amorosina", Address("Via Theodoli 6", "Forlì", "Emilia-Romagna", "Italia"), Location(12.03581f, 44.2222f)),
     Restaurant("L'Angolo di Pizza Casa", Address("Via Gallo Marcucci 20", "Faenza", "Emilia-Romagna", "Italia"), Location(11.873945f, 44.291126f)),
