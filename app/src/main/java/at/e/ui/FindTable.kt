@@ -3,7 +3,9 @@ package at.e.ui
 import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,6 +30,7 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -35,10 +39,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -51,7 +59,11 @@ import androidx.navigation.NavController
 import at.e.Navigation
 import at.e.R
 import at.e.UserPreferences
+import at.e.backend.Restaurant
 import at.e.backend.backendInterface
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data object FindTable {
     object ChooseMethod {
@@ -247,7 +259,8 @@ data object FindTable {
                 innerPadding: PaddingValues,
                 isInitial: Boolean = false,
             ) {
-                val (query, onQueryChange) = remember { mutableStateOf("") }
+                var query by remember { mutableStateOf("") }
+                var restaurants by UiState.remember<List<Restaurant>>()
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -262,8 +275,19 @@ data object FindTable {
                         Header(large = false)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    SearchBar(query, onQueryChange)
-                    RestaurantResults(query, navController)
+                    SearchBar(query) { query = it }
+                    RestaurantResults(restaurants, navController)
+                }
+
+                val coroutineScope = rememberCoroutineScope()
+                LaunchedEffect(query) {
+                    restaurants = UiState.Loading
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val results = backendInterface.getRestaurants(query)
+                        withContext(Dispatchers.Main) {
+                            restaurants = UiState.Data(results)
+                        }
+                    }
                 }
             }
 
@@ -304,49 +328,75 @@ data object FindTable {
                 )
             }
 
+            context(Context, ColumnScope)
             @Composable
-            private fun RestaurantResults(query: String, navController: NavController) {
-                LazyColumn (
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(4.dp),
+            private fun RestaurantResults(
+                restaurants: UiState<List<Restaurant>>,
+                navController: NavController,
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth().imePadding(),
+                    contentAlignment = BiasAlignment(0f, -0.4f),
                 ) {
-                    items(backendInterface.getRestaurants(query)) { result ->
-                        OutlinedCard(
-                            onClick = {
-                                navController.navigate(route = TODO())
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.height(86.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    imageVector = Common.Icons.Restaurant,
-                                    contentDescription = null, // Icon is decorative
-                                    modifier = Modifier.padding(horizontal = 24.dp).size(32.dp),
+                    when (restaurants) {
+                        is UiState.Loading -> CircularProgressIndicator()
+                        is UiState.Data -> {
+                            if (restaurants.data.isEmpty()) {
+                                Text(
+                                    text = getString(R.string.search_restaurants_no_results),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
                                 )
-                                Column(
-                                    modifier = Modifier.weight(1f),
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(4.dp),
                                 ) {
-                                    Text(
-                                        text = result.name,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Text(
-                                        text = result.address.toString(),
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
+                                    items(restaurants.data) { restaurant ->
+                                        OutlinedCard(
+                                            onClick = {
+                                                navController.navigate(route = TODO())
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.height(86.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Icon(
+                                                    imageVector = Common.Icons.Restaurant,
+                                                    contentDescription = null, // Icon is decorative
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 24.dp)
+                                                        .size(32.dp),
+                                                )
+                                                Column(
+                                                    modifier = Modifier.weight(1f),
+                                                ) {
+                                                    Text(
+                                                        text = restaurant.name,
+                                                        fontSize = 18.sp,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                    Text(
+                                                        text = restaurant.address.toString(),
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                    )
+                                                }
+                                                Icon(
+                                                    imageVector = Common.Icons.ChevronRight,
+                                                    contentDescription = null, // Icon is decorative
+                                                    modifier = Modifier
+                                                        .padding(horizontal = 24.dp)
+                                                        .size(24.dp),
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
-                                Icon(
-                                    imageVector = Common.Icons.ChevronRight,
-                                    contentDescription = null, // Icon is decorative
-                                    modifier = Modifier.padding(horizontal = 24.dp).size(24.dp),
-                                )
                             }
                         }
                     }

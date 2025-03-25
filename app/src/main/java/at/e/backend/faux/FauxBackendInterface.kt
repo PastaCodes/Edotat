@@ -15,7 +15,7 @@ object FauxBackendInterface : BackendInterface {
         )
     }
     private val WEIGHTS = listOf(3, 1, 2, 1, 1)
-    private const val CUTOFF = 5000
+    private const val CUTOFF = 1000
     private const val MAX_COUNT = 50
 
     override fun getRestaurants(query: String): List<Restaurant> =
@@ -24,5 +24,7 @@ object FauxBackendInterface : BackendInterface {
             else -> ObjectFuzzySearch.extractSorted(
                 query, RESTAURANTS, TO_STRINGS, WEIGHTS, CUTOFF, MAX_COUNT
             )
+        }.also {
+            Thread.sleep(200) // Simulate API delay
         }
 }
