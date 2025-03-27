@@ -1,4 +1,4 @@
-package at.e.backend
+package at.e.api
 
 data class Location(
     val latitudeDegrees: Float,

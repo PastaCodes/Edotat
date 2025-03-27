@@ -52,10 +52,11 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.preferences)
     implementation(libs.kotlinx.serialization)
     implementation(libs.android.material)
-    implementation(libs.fuzzywuzzy) // Required by faux backend
+    implementation(libs.fuzzywuzzy) // Required by faux api
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

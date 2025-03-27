@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import at.e.Navigation
 
 object Transitions {
     val InForward = slideInHorizontally { it } + fadeIn()
@@ -16,7 +17,7 @@ object Transitions {
     val InBackward = slideInHorizontally { -it } + fadeIn()
     val OutBackward = slideOutHorizontally { it } + fadeOut()
 
-    inline fun <reified T : Any> NavGraphBuilder.slidingComposable(
+    inline fun <reified T : Navigation.Destination> NavGraphBuilder.slidingComposable(
         noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit)
     ) {
         composable<T>(

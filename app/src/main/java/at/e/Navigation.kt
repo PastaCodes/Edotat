@@ -6,66 +6,102 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import at.e.ui.FindTable
-import at.e.ui.Loading
+import at.e.ui.home.FindTable
+import at.e.ui.loading.Loading
 import at.e.ui.Transitions.slidingComposable
+import at.e.ui.home.Redirect
+import at.e.ui.login.Login
 import kotlinx.serialization.Serializable
 
 object Navigation {
-    object Destination {
+    sealed interface Destination {
         @Serializable
-        object Loading
+        data object Loading : Destination
 
-        object FindTable {
+        @Serializable
+        data object Login : Destination
+
+        @Serializable
+        data object Home : Destination {
             @Serializable
-            object ChooseMethod
+            data object Redirect : Destination
 
-            object Method {
+            object FindTable {
                 @Serializable
-                data class QrCode(val isInitial: Boolean = false)
+                data object ChooseMethod : Destination
 
-                @Serializable
-                data class NearMe(val isInitial: Boolean = false)
+                object Method {
+                    @Serializable
+                    data class QrCode(val isInitial: Boolean = false) : Destination
 
-                @Serializable
-                data class Search(val isInitial: Boolean = false)
+                    @Serializable
+                    data class NearMe(val isInitial: Boolean = false) : Destination
+
+                    @Serializable
+                    data class Search(val isInitial: Boolean = false) : Destination
+                }
             }
         }
+
+        @Serializable
+        data object RecentOrders : Destination
+
+        @Serializable
+        data object AccountAndSettings : Destination
     }
 
     context(Context)
     @Composable
     fun Setup(
-        navController: NavHostController,
+        nc: NavHostController,
+        gvm: GlobalViewModel,
         innerPadding: PaddingValues,
         setBottomBarVisible: (Boolean) -> Unit,
     ) {
         NavHost(
-            navController = navController,
+            navController = nc,
             startDestination = Destination.Loading,
         ) {
             composable<Destination.Loading> {
-                Loading.Screen(navController, innerPadding)
-                setBottomBarVisible(false) // Technically not necessary
+                Loading.Screen(innerPadding, gvm, nc)
+                setBottomBarVisible(false)
             }
-            slidingComposable<Destination.FindTable.ChooseMethod> {
-                FindTable.ChooseMethod.Screen(navController, innerPadding)
-                setBottomBarVisible(true)
+            composable<Destination.Login> {
+                Login.Screen(innerPadding, gvm, nc)
+                setBottomBarVisible(false)
             }
-            slidingComposable<Destination.FindTable.Method.QrCode> {
+            navigation<Destination.Home>(startDestination = Destination.Home.Redirect) {
+                composable<Destination.Home.Redirect> {
+                    Redirect(gvm, nc)
+                }
+                slidingComposable<Destination.Home.FindTable.ChooseMethod> {
+                    FindTable.ChooseMethod.Screen(innerPadding, gvm, nc)
+                    setBottomBarVisible(true)
+                }
+                slidingComposable<Destination.Home.FindTable.Method.QrCode> {
+                    // TODO
+                    setBottomBarVisible(true)
+                }
+                slidingComposable<Destination.Home.FindTable.Method.NearMe> {
+                    // TODO
+                    setBottomBarVisible(true)
+                }
+                slidingComposable<Destination.Home.FindTable.Method.Search> { backStackEntry ->
+                    val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.Search>()
+                    FindTable.Method.Search.Screen(innerPadding, route.isInitial, nc)
+                    setBottomBarVisible(true)
+                }
+            }
+            /*
+            navigation<Destination.RecentOrders>(startDestination = TODO()) {
                 // TODO
-                setBottomBarVisible(true)
             }
-            slidingComposable<Destination.FindTable.Method.NearMe> {
+            navigation<Destination.AccountAndSettings>(startDestination = TODO()) {
                 // TODO
-                setBottomBarVisible(true)
             }
-            slidingComposable<Destination.FindTable.Method.Search> { backStackEntry ->
-                val route = backStackEntry.toRoute<Destination.FindTable.Method.Search>()
-                FindTable.Method.Search.Screen(navController, innerPadding, route.isInitial)
-                setBottomBarVisible(true)
-            }
+             */
         }
     }
 }

@@ -1,4 +1,4 @@
-package at.e.backend
+package at.e.api
 
 data class Restaurant(
     val name: String,

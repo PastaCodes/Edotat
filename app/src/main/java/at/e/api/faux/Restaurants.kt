@@ -1,8 +1,8 @@
-package at.e.backend.faux
+package at.e.api.faux
 
-import at.e.backend.Address
-import at.e.backend.Location
-import at.e.backend.Restaurant
+import at.e.api.Address
+import at.e.api.Location
+import at.e.api.Restaurant
 
 val RESTAURANTS = listOf(
     Restaurant("#CB ZERO OTTO", Address("Viale al Mare 136", "Casalborsetti", "Emilia-Romagna", "Italia"), Location(12.283222f, 44.554234f)),

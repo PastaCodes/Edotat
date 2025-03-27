@@ -4,10 +4,7 @@ import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.Icons.Filled
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -23,23 +20,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavController
+import at.e.GlobalViewModel
+import at.e.Navigation
 import at.e.R
+import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
 
-object Common {
-    val Icons = Filled
+context(GlobalViewModel)
+fun Modifier.shakeable(condition: Boolean = true) =
+    if (condition) this.offset(shakeOffset) else this
 
+object Common {
     context(Context)
     @Composable
     fun Container(
-        navController: NavController,
+        gvm: GlobalViewModel,
+        nc: NavController,
         content: @Composable (PaddingValues, (Boolean) -> Unit) -> Unit,
     ) {
         val (bottomBarVisible, setBottomBarVisible) = remember { mutableStateOf(false) }
         EdotatTheme.Apply {
             Scaffold(
                 modifier = Modifier.fillMaxSize(),
-                bottomBar = { if (bottomBarVisible) BottomBar(navController) },
+                bottomBar = { if (bottomBarVisible) BottomBar(nc) },
+                snackbarHost = { gvm.SnackbarHost() },
                 content = { innerPadding -> content(innerPadding, setBottomBarVisible) },
             )
         }
@@ -48,17 +52,30 @@ object Common {
     private data class BottomButton(
         val imageVector: ImageVector,
         @StringRes val textResId: Int,
+        val route: Any,
     )
 
-    private val bottomButtons = listOf(
-        BottomButton(Icons.Restaurant, R.string.bottom_bar_home),
-        BottomButton(Icons.History, R.string.bottom_bar_orders),
-        BottomButton(Icons.AccountCircle, R.string.bottom_bar_account_and_settings),
+    private val bottomButtons = arrayOf(
+        BottomButton(
+            EdotatIcons.Meal,
+            R.string.bottom_bar_home,
+            Navigation.Destination.Home
+        ),
+        BottomButton(
+            EdotatIcons.Recent,
+            R.string.bottom_bar_orders,
+            Navigation.Destination.RecentOrders
+        ),
+        BottomButton(
+            EdotatIcons.Account,
+            R.string.bottom_bar_account_and_settings,
+            Navigation.Destination.AccountAndSettings
+        ),
     )
 
     context(Context)
     @Composable
-    fun BottomBar(navController: NavController) {
+    fun BottomBar(nc: NavController) {
         var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
         NavigationBar {
             bottomButtons.forEachIndexed { index, button ->
@@ -66,7 +83,7 @@ object Common {
                     selected = selectedTabIndex == index,
                     onClick = {
                         selectedTabIndex = index
-                        navController.navigate(route = TODO())
+                        nc.navigate(route = button.route)
                     },
                     icon = {
                         Icon(

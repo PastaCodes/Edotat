@@ -1,4 +1,4 @@
-package at.e.backend.faux.lib
+package at.e.api.faux.lib
 
 import com.frosch2010.fuzzywuzzy_kotlin.FuzzySearch
 

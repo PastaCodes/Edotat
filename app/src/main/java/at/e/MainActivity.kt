@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.navigation.compose.rememberNavController
 import at.e.ui.Common
 
@@ -12,9 +13,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val navController = rememberNavController()
-            Common.Container(navController) { innerPadding, setBottomBarVisible ->
-                Navigation.Setup(navController, innerPadding, setBottomBarVisible)
+            val gvm: GlobalViewModel by viewModels { GlobalViewModel.Factory(application) }
+            val nc = rememberNavController()
+            Common.Container(gvm, nc) { innerPadding, setBottomBarVisible ->
+                Navigation.Setup(nc, gvm, innerPadding, setBottomBarVisible)
             }
         }
     }

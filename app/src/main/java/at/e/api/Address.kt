@@ -1,4 +1,4 @@
-package at.e.backend
+package at.e.api
 
 data class Address(
     val streetAddress: String,  // example: street name and building number

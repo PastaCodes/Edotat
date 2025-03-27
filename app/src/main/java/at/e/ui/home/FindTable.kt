@@ -1,4 +1,4 @@
-package at.e.ui
+package at.e.ui.home
 
 import android.content.Context
 import androidx.annotation.StringRes
@@ -21,13 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,10 +33,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -51,17 +45,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.R
 import at.e.UserPreferences
-import at.e.backend.Restaurant
-import at.e.backend.backendInterface
+import at.e.api.Restaurant
+import at.e.api.api
+import at.e.lib.LoadingState
+import at.e.ui.theme.EdotatIcons
+import at.e.ui.theme.EdotatTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -69,9 +80,14 @@ data object FindTable {
     object ChooseMethod {
         context(Context)
         @Composable
-        fun Screen(navController: NavController, innerPadding: PaddingValues) {
-            // State of the "set as preferred method" checkbox
-            val (checkedState, onStateChange) = remember { mutableStateOf(false) }
+        fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
+            val vm = viewModel<VM>()
+            DisposableEffect(Unit) {
+                onDispose {
+                    vm.setPreferredMethod = false // Reset checkbox when leaving
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -82,9 +98,9 @@ data object FindTable {
             ) {
                 Header(large = true)
                 Spacer(modifier = Modifier.height(16.dp))
-                MethodButtons(navController, checkedState)
+                MethodButtons(vm, gvm, nc)
                 Spacer(modifier = Modifier.height(32.dp))
-                SetPreferredMethod(checkedState, onStateChange)
+                SetPreferredMethod(vm)
             }
         }
 
@@ -95,15 +111,16 @@ data object FindTable {
         )
 
         private val methodButtons = listOf(
-            MethodButton(Common.Icons.QrCodeScanner, R.string.find_table_scan_qr_code, Method.QrCode),
-            MethodButton(Common.Icons.MyLocation, R.string.find_table_near_me, Method.NearMe),
-            MethodButton(Common.Icons.Search, R.string.find_table_search, Method.Search)
+            MethodButton(EdotatIcons.QrCodeScanner, R.string.find_table_scan_qr_code, Method.QrCode),
+            MethodButton(EdotatIcons.MyLocation, R.string.find_table_near_me, Method.NearMe),
+            MethodButton(EdotatIcons.Search, R.string.find_table_search, Method.Search)
         )
 
         context(Context)
         @Composable
-        private fun MethodButtons(navController: NavController, checkedState: Boolean) {
+        private fun MethodButtons(vm: VM, gvm: GlobalViewModel, nc: NavController) {
             val coroutineScope = rememberCoroutineScope()
+
             Column(
                 modifier = Modifier.width(300.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -111,21 +128,21 @@ data object FindTable {
                 methodButtons.forEach { button ->
                     Button(
                         onClick = {
-                            if (checkedState) {
-                                with(coroutineScope) {
-                                    UserPreferences.save(
+                            if (vm.setPreferredMethod) {
+                                coroutineScope.launch {
+                                    gvm.userPreferences.save(
                                         key = UserPreferences.Keys.FindTablePreferredMethod,
                                         value = button.method.toPreference(),
                                     )
                                 }
                             }
-                            navController.navigate(
+                            nc.navigate(
                                 route = button.method.route(/* isInitial = */ false),
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         contentPadding = PaddingValues(24.dp, 16.dp),
-                        shape = MaterialTheme.shapes.medium,
+                        shape = EdotatTheme.RoundedCornerShape,
                     ) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
@@ -150,17 +167,17 @@ data object FindTable {
 
         context(Context)
         @Composable
-        private fun SetPreferredMethod(checkedState: Boolean, onStateChange: (Boolean) -> Unit) {
+        private fun SetPreferredMethod(vm: VM) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.toggleable(
-                    value = checkedState,
-                    onValueChange = { onStateChange(!checkedState) },
+                    value = vm.setPreferredMethod,
+                    onValueChange = { vm.setPreferredMethod = it },
                     role = Role.Checkbox
                 ),
             ) {
                 Checkbox(
-                    checked = checkedState,
+                    checked = vm.setPreferredMethod,
                     onCheckedChange = null,
                 )
                 Text(
@@ -169,6 +186,10 @@ data object FindTable {
                     modifier = Modifier. padding(start = 8.dp),
                 )
             }
+        }
+
+        class VM : ViewModel() {
+            var setPreferredMethod by mutableStateOf(false)
         }
     }
 
@@ -193,11 +214,9 @@ data object FindTable {
 
     context(Context)
     @Composable
-    private fun Back(navController: NavController) {
+    private fun Back(nc: NavController) {
         TextButton(
-            onClick = {
-                navController.navigateUp()
-            },
+            onClick = nc::navigateUp,
             shape = MaterialTheme.shapes.medium,
             contentPadding = PaddingValues(
                 top = 8.dp,
@@ -209,7 +228,7 @@ data object FindTable {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    imageVector = Common.Icons.ChevronLeft,
+                    imageVector = EdotatIcons.Back,
                     contentDescription = null, // Icon is decorative
                     modifier = Modifier.size(32.dp),
                 )
@@ -221,7 +240,7 @@ data object FindTable {
         }
     }
 
-    sealed class Method(val route: (Boolean) -> Any) {
+    sealed class Method(val route: (/* isInitial: */ Boolean) -> Navigation.Destination) {
         companion object {
             const val NO_PREFERENCE = 0
 
@@ -235,7 +254,7 @@ data object FindTable {
 
             fun Method?.toRoute(isInitial: Boolean = false) =
                 when (this) {
-                    null -> Navigation.Destination.FindTable.ChooseMethod
+                    null -> Navigation.Destination.Home.FindTable.ChooseMethod
                     else -> this.route(isInitial)
                 }
         }
@@ -247,20 +266,16 @@ data object FindTable {
                 Search -> 3
             }
 
-        data object QrCode : Method(Navigation.Destination.FindTable.Method::QrCode)
+        data object QrCode : Method(Navigation.Destination.Home.FindTable.Method::QrCode)
 
-        data object NearMe : Method(Navigation.Destination.FindTable.Method::NearMe)
+        data object NearMe : Method(Navigation.Destination.Home.FindTable.Method::NearMe)
 
-        data object Search : Method(Navigation.Destination.FindTable.Method::Search) {
+        data object Search : Method(Navigation.Destination.Home.FindTable.Method::Search) {
             context(Context)
             @Composable
-            fun Screen(
-                navController: NavController,
-                innerPadding: PaddingValues,
-                isInitial: Boolean = false,
-            ) {
-                var query by remember { mutableStateOf("") }
-                var restaurants by UiState.remember<List<Restaurant>>()
+            fun Screen(innerPadding: PaddingValues, isInitial: Boolean, nc: NavController) {
+                val vm = viewModel<VM>()
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -269,39 +284,30 @@ data object FindTable {
                         .consumeWindowInsets(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Back(navController)
+                    Back(nc)
                     if (isInitial) {
                         Spacer(modifier = Modifier.height(32.dp))
                         Header(large = false)
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    SearchBar(query) { query = it }
-                    RestaurantResults(restaurants, navController)
-                }
-
-                val coroutineScope = rememberCoroutineScope()
-                LaunchedEffect(query) {
-                    restaurants = UiState.Loading
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val results = backendInterface.getRestaurants(query)
-                        withContext(Dispatchers.Main) {
-                            restaurants = UiState.Data(results)
-                        }
-                    }
+                    SearchBar(vm)
+                    RestaurantResults(nc, vm)
                 }
             }
 
             context(Context)
             @Composable
-            private fun SearchBar(query: String, setQuery: (String) -> Unit) {
+            private fun SearchBar(vm: VM) {
+                val query by vm.query.collectAsState()
+
                 OutlinedTextField(
                     value = query,
-                    onValueChange = setQuery,
+                    onValueChange = vm::setQuery,
                     modifier = Modifier.fillMaxWidth(),
                     shape = CircleShape,
                     leadingIcon = {
                         Icon(
-                            imageVector = Common.Icons.Search,
+                            imageVector = EdotatIcons.Search,
                             contentDescription = null, // Icon is decorative
                             modifier = Modifier.padding(start = 16.dp),
                         )
@@ -309,10 +315,10 @@ data object FindTable {
                     trailingIcon = {
                         if (query.isNotEmpty()) {
                             IconButton(
-                                onClick = { setQuery("") },
+                                onClick = vm::clearQuery,
                             ) {
                                 Icon(
-                                    imageVector = Common.Icons.Close,
+                                    imageVector = EdotatIcons.Close,
                                     contentDescription = getString(R.string.icon_clear_search),
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
@@ -325,82 +331,117 @@ data object FindTable {
                         )
                     },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.None,
+                    )
                 )
             }
 
             context(Context, ColumnScope)
             @Composable
-            private fun RestaurantResults(
-                restaurants: UiState<List<Restaurant>>,
-                navController: NavController,
-            ) {
+            private fun RestaurantResults(nc: NavController, vm: VM) {
+                val restaurants by vm.restaurants.collectAsState()
+
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth().imePadding(),
                     contentAlignment = BiasAlignment(0f, -0.4f),
                 ) {
-                    when (restaurants) {
-                        is UiState.Loading -> CircularProgressIndicator()
-                        is UiState.Data -> {
-                            if (restaurants.data.isEmpty()) {
+                    when (val r = restaurants) {
+                        is LoadingState.Loading -> CircularProgressIndicator()
+                        is LoadingState.Data -> {
+                            if (r.data.isEmpty()) {
                                 Text(
                                     text = getString(R.string.search_restaurants_no_results),
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             } else {
-                                LazyColumn(
-                                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                                    contentPadding = PaddingValues(4.dp),
-                                ) {
-                                    items(restaurants.data) { restaurant ->
-                                        OutlinedCard(
-                                            onClick = {
-                                                navController.navigate(route = TODO())
-                                            },
-                                            modifier = Modifier.fillMaxWidth(),
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.height(86.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                            ) {
-                                                Icon(
-                                                    imageVector = Common.Icons.Restaurant,
-                                                    contentDescription = null, // Icon is decorative
-                                                    modifier = Modifier
-                                                        .padding(horizontal = 24.dp)
-                                                        .size(32.dp),
-                                                )
-                                                Column(
-                                                    modifier = Modifier.weight(1f),
-                                                ) {
-                                                    Text(
-                                                        text = restaurant.name,
-                                                        fontSize = 18.sp,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                    )
-                                                    Text(
-                                                        text = restaurant.address.toString(),
-                                                        maxLines = 2,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                    )
-                                                }
-                                                Icon(
-                                                    imageVector = Common.Icons.ChevronRight,
-                                                    contentDescription = null, // Icon is decorative
-                                                    modifier = Modifier
-                                                        .padding(horizontal = 24.dp)
-                                                        .size(24.dp),
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
+                                RestaurantList(r.data, nc)
                             }
                         }
                     }
                 }
+            }
+
+            @Composable
+            private fun RestaurantList(restaurants: List<Restaurant>, nc: NavController) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(4.dp),
+                ) {
+                    items(restaurants) { restaurant ->
+                        OutlinedCard(
+                            onClick = {
+                                nc.navigate(route = TODO())
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.height(86.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = EdotatIcons.Restaurant,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .size(32.dp),
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text = restaurant.name,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = restaurant.address.toString(),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = EdotatIcons.Forward,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .size(24.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            @OptIn(ExperimentalCoroutinesApi::class)
+            class VM : ViewModel() {
+                private val _query = MutableStateFlow("")
+                val query = _query.asStateFlow()
+
+                fun setQuery(query: String) {
+                    _query.value = query
+                }
+
+                fun clearQuery() {
+                    _query.value = ""
+                }
+
+                val restaurants: StateFlow<LoadingState<List<Restaurant>>> =
+                    query
+                        .flatMapLatest { query ->
+                            flow {
+                                emit(LoadingState.Loading)
+                                emit(LoadingState.Data(withContext(Dispatchers.IO) {
+                                    api.getRestaurants(query)
+                                }))
+                            }
+                        }
+                        .stateIn(viewModelScope, SharingStarted.Lazily, LoadingState.Loading)
             }
         }
     }
