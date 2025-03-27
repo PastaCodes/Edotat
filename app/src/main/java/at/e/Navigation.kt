@@ -13,6 +13,7 @@ import at.e.ui.loading.Loading
 import at.e.ui.Transitions.slidingComposable
 import at.e.ui.home.Redirect
 import at.e.ui.login.Login
+import at.e.ui.login.Register
 import kotlinx.serialization.Serializable
 
 object Navigation {
@@ -22,6 +23,9 @@ object Navigation {
 
         @Serializable
         data object Login : Destination
+
+        @Serializable
+        data object Register : Destination
 
         @Serializable
         data object Home : Destination {
@@ -70,6 +74,10 @@ object Navigation {
             }
             composable<Destination.Login> {
                 Login.Screen(innerPadding, gvm, nc)
+                setBottomBarVisible(false)
+            }
+            composable<Destination.Register> {
+                Register.Screen(innerPadding, gvm, nc)
                 setBottomBarVisible(false)
             }
             navigation<Destination.Home>(startDestination = Destination.Home.Redirect) {

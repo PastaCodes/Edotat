@@ -69,4 +69,26 @@ object Authentication {
         gvm.userPreferences.delete(UserPreferences.Keys.AuthToken)
         gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenExpiration)
     }
+
+    suspend fun register(
+        email: String,
+        password: String,
+        requestToken: Boolean,
+        gvm: GlobalViewModel,
+    ): Account? {
+        val response = api.register(email, password, requestToken) ?: return null
+        if (requestToken && response.newToken != null) {
+            gvm.userPreferences.save(
+                UserPreferences.Keys.AuthToken,
+                response.newToken
+            )
+            if (response.newTokenExpiration != null) {
+                gvm.userPreferences.save(
+                    UserPreferences.Keys.AuthTokenExpiration,
+                    response.newTokenExpiration
+                )
+            }
+        }
+        return response.account
+    }
 }

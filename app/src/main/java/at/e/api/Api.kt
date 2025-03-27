@@ -23,6 +23,8 @@ interface Api {
         refreshToken: Boolean = false,
     ): AuthResult?
 
+    suspend fun register(email: String, password: String, requestToken: Boolean): AuthResult?
+
     suspend fun getActiveOrder(account: Account): Order?
 
     suspend fun getRestaurants(query: String): List<Restaurant>

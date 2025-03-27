@@ -84,6 +84,19 @@ object FauxApi : Api {
         Api.AuthResult(account, newToken, newTokenExpiration)
     }
 
+    override suspend fun register(
+        email: String,
+        password: String,
+        requestToken: Boolean
+    ) = delayed {
+        if (accounts.containsKey(email))
+            return@delayed null
+        val account = Account()
+        accounts[email] = PasswordEntry(account, hashPassword(password))
+        val (newToken, newTokenExpiration) = generateAndStoreTokenIf(requestToken, account)
+        Api.AuthResult(account, newToken, newTokenExpiration)
+    }
+
     override suspend fun getActiveOrder(account: Account): Order? = delayed {
         null // TODO
     }

@@ -56,6 +56,7 @@ class GlobalViewModel(context: Context) : ViewModel() {
         data object ManualLoginFailed : LoginState
         class LoggedIn(val account: Account) : LoginState
         data object LoggedOut : LoginState
+        data object RegisterFailed : LoginState
     }
 
     suspend fun tryAutoLogin() {
@@ -85,6 +86,19 @@ class GlobalViewModel(context: Context) : ViewModel() {
         withContext(Dispatchers.IO) {
             _loginState.value = LoginState.LoggedOut
             Authentication.logout(this@GlobalViewModel)
+        }
+    }
+
+    suspend fun tryRegister(email: String, password: String, requestToken: Boolean) {
+        _loginState.value = LoginState.Loading
+        withContext(Dispatchers.IO) {
+            val result = Authentication.register(
+                email, password, requestToken, this@GlobalViewModel
+            )
+            when (result) {
+                is Account -> _loginState.value = LoginState.LoggedIn(result)
+                null -> _loginState.value = LoginState.RegisterFailed
+            }
         }
     }
 

@@ -37,7 +37,7 @@ object Loading {
                     nc.navigate(route = Navigation.Destination.Login)
                 }
                 is GlobalViewModel.LoginState.LoggedIn -> gvm.loadActiveOrder()
-                else -> throw IllegalStateException()
+                else -> gvm.logout()
             }
         }
         LaunchedEffect(orderState, ftmpState) {
