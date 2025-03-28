@@ -55,6 +55,7 @@ import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.Navigation.ClearBackStack
 import at.e.R
+import at.e.UserPreferences
 import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
@@ -111,7 +112,8 @@ object Register {
                 isPasswordError = password.isBlank()
                 coroutineScope.launch {
                     if (email.isNotBlank() && password.isNotBlank()) {
-                        gvm.tryRegister(email, password, requestToken = stayLoggedIn)
+                        gvm.userPreferences.save(UserPreferences.Keys.AutoLogin, stayLoggedIn)
+                        gvm.tryRegister(email, password)
                     } else {
                         gvm.shake()
                     }

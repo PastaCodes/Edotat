@@ -114,7 +114,7 @@ object Login {
                 isPasswordError = password.isBlank()
                 coroutineScope.launch {
                     if (email.isNotBlank() && password.isNotBlank()) {
-                        gvm.tryManualLogin(email, password, requestToken = true)
+                        gvm.tryManualLogin(email, password)
                     } else {
                         gvm.shake()
                     }

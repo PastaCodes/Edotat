@@ -21,6 +21,8 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
     object Keys {
         val AuthToken = stringPreferencesKey("auth_token")
         val AuthTokenExpiration = longPreferencesKey("auth_token_expiration")
+        val AuthTokenEmail = stringPreferencesKey("auth_token_email")
+        val AutoLogin = booleanPreferencesKey("auto_login")
         val AutoLoginRequireBiometrics = booleanPreferencesKey("auto_login_require_biometrics")
         val FindTablePreferredMethod = intPreferencesKey("find_table_preferred_method")
     }
@@ -31,11 +33,17 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
     val authTokenExpiration =
         dataStore.data.map { it[Keys.AuthTokenExpiration] }
 
-    val findTableMethodPreference =
-        dataStore.data.map { it[Keys.FindTablePreferredMethod] ?: FindTable.Method.NO_PREFERENCE }
+    val authTokenEmail =
+        dataStore.data.map { it[Keys.AuthTokenEmail] }
+
+    val autoLogin =
+        dataStore.data.map { it[Keys.AutoLogin] ?: false }
 
     val autoLoginRequireBiometrics =
         dataStore.data.map { it[Keys.AutoLoginRequireBiometrics] ?: false }
+
+    val findTableMethodPreference =
+        dataStore.data.map { it[Keys.FindTablePreferredMethod] ?: FindTable.Method.NO_PREFERENCE }
 
     suspend fun <T> save(key: Preferences.Key<T>, value: T) {
         dataStore.edit { it[key] = value }

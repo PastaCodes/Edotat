@@ -72,13 +72,10 @@ class GlobalViewModel(context: Context) : ViewModel() {
         }
     }
 
-    suspend fun tryManualLogin(email: String, password: String, requestToken: Boolean = false) {
+    suspend fun tryManualLogin(email: String, password: String) {
         _loginState.value = LoginState.Loading
         withContext(Dispatchers.IO) {
-            val result = Authentication.manualLogin(
-                email, password, requestToken, this@GlobalViewModel
-            )
-            when (result) {
+            when (val result = Authentication.manualLogin(email, password, this@GlobalViewModel)) {
                 null -> _loginState.value = LoginState.ManualLoginFailed
                 else -> _loginState.value =
                     LoginState.LoggedIn(account = result.first, connection = result.second)
@@ -97,14 +94,10 @@ class GlobalViewModel(context: Context) : ViewModel() {
     suspend fun tryRegister(
         email: String,
         password: String,
-        requestToken: Boolean,
     ) {
         _loginState.value = LoginState.Loading
         withContext(Dispatchers.IO) {
-            val account = Authentication.register(
-                email, password, requestToken, this@GlobalViewModel
-            )
-            when (account) {
+            when (val account = Authentication.register(email, password, this@GlobalViewModel)) {
                 is Account -> _loginState.value = LoginState.Registered(account)
                 null -> _loginState.value = LoginState.RegisterFailed
             }
