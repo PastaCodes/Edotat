@@ -6,10 +6,17 @@ val api: Api =
     FauxApi // Development mode only
 
 interface Api {
+    interface Connection {
+        suspend fun getActiveOrder(): Order?
+
+        suspend fun close()
+    }
+
     class AuthResult(
         val account: Account,
         val newToken: String? = null,
         val newTokenExpiration: Long? = null,
+        val connection: Connection? = null,
     )
 
     suspend fun authenticate(
@@ -24,8 +31,6 @@ interface Api {
     ): AuthResult?
 
     suspend fun register(email: String, password: String, requestToken: Boolean): AuthResult?
-
-    suspend fun getActiveOrder(account: Account): Order?
 
     suspend fun getRestaurants(query: String): List<Restaurant>
 }

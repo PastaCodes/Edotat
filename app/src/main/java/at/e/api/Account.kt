@@ -1,3 +1,3 @@
 package at.e.api
 
-class Account
+class Account(val email: String)

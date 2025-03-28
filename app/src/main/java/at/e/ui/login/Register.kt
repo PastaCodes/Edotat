@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
+import at.e.Navigation.ClearBackStack
 import at.e.R
 import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
@@ -80,9 +81,15 @@ object Register {
 
         LaunchedEffect(loginState) {
             when (loginState) {
-                is GlobalViewModel.LoginState.LoggedIn -> {
-                    nc.popBackStack() // Forget registration
-                    nc.navigate(route = Navigation.Destination.Home)
+                is GlobalViewModel.LoginState.Registered -> {
+                    gvm.showSnackbar(
+                        messageResId = R.string.register_confirm_email,
+                        actionResId = R.string.action_ok,
+                        withDismissAction = false,
+                        action = {
+                            nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
+                        }
+                    )
                 }
                 is GlobalViewModel.LoginState.RegisterFailed -> {
                     isEmailError = true
@@ -90,12 +97,16 @@ object Register {
                     gvm.shake()
                     gvm.showSnackbar(R.string.register_failed_credentials)
                 }
+                is GlobalViewModel.LoginState.Loading -> { }
                 else -> gvm.logout()
             }
         }
 
         val tryRegister = {
-            if (loginState !is GlobalViewModel.LoginState.Loading) {
+            if (
+                loginState !is GlobalViewModel.LoginState.Loading
+            &&  loginState !is GlobalViewModel.LoginState.Registered
+            ) {
                 isEmailError = email.isBlank()
                 isPasswordError = password.isBlank()
                 coroutineScope.launch {
@@ -261,11 +272,9 @@ object Register {
                     onClick = tryRegister,
                     shape = EdotatTheme.RoundedCornerShape,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = loginState !is GlobalViewModel.LoginState.Registered,
                 ) {
-                    if (
-                        loginState is GlobalViewModel.LoginState.Loading
-                    ||  loginState is GlobalViewModel.LoginState.LoggedIn
-                    ) {
+                    if (loginState is GlobalViewModel.LoginState.Loading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 3.dp,
@@ -283,7 +292,6 @@ object Register {
                 HorizontalDivider()
                 TextButton(
                     onClick = {
-                        nc.popBackStack()
                         nc.navigate(route = Navigation.Destination.Login)
                     },
                     shape = EdotatTheme.RoundedCornerShape,

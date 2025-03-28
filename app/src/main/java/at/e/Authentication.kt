@@ -1,6 +1,7 @@
 package at.e
 
 import at.e.api.Account
+import at.e.api.Api
 import at.e.api.api
 import kotlinx.coroutines.flow.first
 import java.time.Duration
@@ -9,7 +10,7 @@ import java.time.Instant
 object Authentication {
     private fun biometricsLogin(): Boolean = true // TODO
 
-    suspend fun autoLogin(gvm: GlobalViewModel): Account? {
+    suspend fun autoLogin(gvm: GlobalViewModel): Pair<Account, Api.Connection>? {
         val token = gvm.userPreferences.authToken.first() ?: return null
         var doRefresh = true
         val tokenExpiration = gvm.userPreferences.authTokenExpiration.first()
@@ -40,7 +41,7 @@ object Authentication {
                 )
             }
         }
-        return response.account
+        return response.account to response.connection!!
     }
 
     suspend fun manualLogin(
@@ -48,7 +49,7 @@ object Authentication {
         password: String,
         requestToken: Boolean = false,
         gvm: GlobalViewModel,
-    ): Account? {
+    ): Pair<Account, Api.Connection>? {
         val response = api.authenticate(email, password, requestToken) ?: return null
         if (requestToken && response.newToken != null) {
             gvm.userPreferences.save(
@@ -62,10 +63,14 @@ object Authentication {
                 )
             }
         }
-        return response.account
+        return response.account to response.connection!!
     }
 
     suspend fun logout(gvm: GlobalViewModel) {
+        when (val ls = gvm.loginState.value) {
+            is GlobalViewModel.LoginState.LoggedIn -> ls.connection.close()
+            else -> { }
+        }
         gvm.userPreferences.delete(UserPreferences.Keys.AuthToken)
         gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenExpiration)
     }

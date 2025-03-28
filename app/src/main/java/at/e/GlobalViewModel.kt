@@ -8,6 +8,7 @@ import androidx.compose.animation.core.repeatable
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
@@ -19,8 +20,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import at.e.UserPreferences.Companion.dataStore
 import at.e.api.Account
+import at.e.api.Api
 import at.e.api.Order
-import at.e.api.api
 import at.e.lib.LoadingState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,17 +55,19 @@ class GlobalViewModel(context: Context) : ViewModel() {
         data object Loading : LoginState
         data object AutoLoginFailed : LoginState
         data object ManualLoginFailed : LoginState
-        class LoggedIn(val account: Account) : LoginState
+        class LoggedIn(val account: Account, val connection: Api.Connection) : LoginState
         data object LoggedOut : LoginState
         data object RegisterFailed : LoginState
+        data class Registered(val account: Account) : LoginState
     }
 
     suspend fun tryAutoLogin() {
         _loginState.value = LoginState.Loading
         withContext(Dispatchers.IO) {
-            when (val account = Authentication.autoLogin(this@GlobalViewModel)) {
-                is Account -> _loginState.value = LoginState.LoggedIn(account)
+            when (val result = Authentication.autoLogin(this@GlobalViewModel)) {
                 null -> _loginState.value = LoginState.AutoLoginFailed
+                else -> _loginState.value =
+                    LoginState.LoggedIn(account = result.first, connection = result.second)
             }
         }
     }
@@ -76,27 +79,33 @@ class GlobalViewModel(context: Context) : ViewModel() {
                 email, password, requestToken, this@GlobalViewModel
             )
             when (result) {
-                is Account -> _loginState.value = LoginState.LoggedIn(result)
                 null -> _loginState.value = LoginState.ManualLoginFailed
+                else -> _loginState.value =
+                    LoginState.LoggedIn(account = result.first, connection = result.second)
             }
         }
     }
 
     suspend fun logout() {
         withContext(Dispatchers.IO) {
-            _loginState.value = LoginState.LoggedOut
             Authentication.logout(this@GlobalViewModel)
+            _loginState.value = LoginState.LoggedOut
         }
     }
 
-    suspend fun tryRegister(email: String, password: String, requestToken: Boolean) {
+    context(Context)
+    suspend fun tryRegister(
+        email: String,
+        password: String,
+        requestToken: Boolean,
+    ) {
         _loginState.value = LoginState.Loading
         withContext(Dispatchers.IO) {
-            val result = Authentication.register(
+            val account = Authentication.register(
                 email, password, requestToken, this@GlobalViewModel
             )
-            when (result) {
-                is Account -> _loginState.value = LoginState.LoggedIn(result)
+            when (account) {
+                is Account -> _loginState.value = LoginState.Registered(account)
                 null -> _loginState.value = LoginState.RegisterFailed
             }
         }
@@ -112,13 +121,12 @@ class GlobalViewModel(context: Context) : ViewModel() {
         withContext(Dispatchers.IO) {
             when (val ls = _loginState.value) {
                 is LoginState.LoggedIn -> {
-                    val order = api.getActiveOrder(ls.account)
+                    val order = ls.connection.getActiveOrder()
                     _orderState.value = when (order) {
                         is Order -> OrderState.Active(order)
                         else -> OrderState.None
                     }
                 }
-
                 else -> throw IllegalStateException()
             }
         }
@@ -135,12 +143,16 @@ class GlobalViewModel(context: Context) : ViewModel() {
         @StringRes messageResId: Int,
         @StringRes actionResId: Int? = null,
         withDismissAction: Boolean = true,
+        action: (() -> Unit)? = null,
     ) {
-        snackbarHostState.showSnackbar(
+        val result = snackbarHostState.showSnackbar(
             message = getString(messageResId),
             actionLabel = if (actionResId != null) getString(actionResId) else null,
             withDismissAction = withDismissAction,
         )
+        if (result == SnackbarResult.ActionPerformed && action != null) {
+            action()
+        }
     }
 
     @Composable

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
+import at.e.Navigation.ClearBackStack
 import at.e.R
 import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
@@ -66,7 +68,12 @@ object Login {
         val loginState by gvm.loginState.collectAsState()
         val orderState by gvm.orderState.collectAsState()
 
-        var email by rememberSaveable { mutableStateOf("") }
+        var email by rememberSaveable { mutableStateOf(
+            when (val ls = loginState) {
+                is GlobalViewModel.LoginState.Registered -> ls.account.email
+                else -> ""
+            }
+        ) }
         var password by rememberSaveable { mutableStateOf("") }
         var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
@@ -82,8 +89,7 @@ object Login {
                     when (orderState) {
                         is GlobalViewModel.OrderState.Loading -> gvm.loadActiveOrder()
                         else -> {
-                            nc.popBackStack() // Forget login
-                            nc.navigate(route = Navigation.Destination.Home)
+                            nc.navigate(route = Navigation.Destination.Home, ClearBackStack)
                         }
                     }
                 }
@@ -94,12 +100,16 @@ object Login {
                     gvm.shake()
                     gvm.showSnackbar(R.string.login_failed_credentials)
                 }
+                is GlobalViewModel.LoginState.Loading -> { }
                 else -> gvm.logout()
             }
         }
 
         val tryLogin = {
-            if (loginState !is GlobalViewModel.LoginState.Loading) {
+            if (
+                loginState !is GlobalViewModel.LoginState.Loading
+            &&  loginState !is GlobalViewModel.LoginState.LoggedIn
+            ) {
                 isEmailError = email.isBlank()
                 isPasswordError = password.isBlank()
                 coroutineScope.launch {
@@ -272,6 +282,7 @@ object Login {
                     onClick = tryLogin,
                     shape = EdotatTheme.RoundedCornerShape,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = loginState !is GlobalViewModel.LoginState.LoggedIn,
                 ) {
                     if (
                         loginState is GlobalViewModel.LoginState.Loading
@@ -280,7 +291,11 @@ object Login {
                         CircularProgressIndicator(
                             modifier = Modifier.size(20.dp),
                             strokeWidth = 3.dp,
-                            color = MaterialTheme.colorScheme.onPrimary,
+                            color =
+                                if (loginState !is GlobalViewModel.LoginState.LoggedIn)
+                                    MaterialTheme.colorScheme.onPrimary
+                                else
+                                    ButtonDefaults.buttonColors().disabledContentColor
                         )
                     } else {
                         Text(
@@ -294,7 +309,6 @@ object Login {
                 HorizontalDivider()
                 TextButton(
                     onClick = {
-                        nc.popBackStack()
                         nc.navigate(route = Navigation.Destination.Register)
                     },
                     shape = EdotatTheme.RoundedCornerShape,

@@ -24,6 +24,10 @@ object FauxApi : Api {
 
     private val accounts = mutableMapOf<String, PasswordEntry>()
     private val tokens = mutableMapOf<String, TokenEntry>()
+    private val connections = mutableMapOf<Api.Connection, Account>()
+
+    private val Api.Connection.account
+        get() = connections[this]!!
 
     private fun hashPassword(password: String) =
         password.hashCode().toString() // Extremely safe algorithm
@@ -65,6 +69,18 @@ object FauxApi : Api {
         return if (!expired) account else null
     }
 
+    private fun createConnection(account: Account) =
+        object : Api.Connection {
+            override suspend fun getActiveOrder(): Order? = delayed {
+                null // TODO
+            }
+
+            override suspend fun close() {
+                connections.remove(this)
+            }
+        }
+            .also { connections[it] = account }
+
     override suspend fun authenticate(
         email: String,
         password: String,
@@ -72,7 +88,7 @@ object FauxApi : Api {
     ) = delayed {
         val account = validateCredentials(email, password) ?: return@delayed null
         val (newToken, newTokenExpiration) = generateAndStoreTokenIf(requestToken, account)
-        Api.AuthResult(account, newToken, newTokenExpiration)
+        Api.AuthResult(account, newToken, newTokenExpiration, createConnection(account))
     }
 
     override suspend fun authenticateWithToken(
@@ -81,7 +97,7 @@ object FauxApi : Api {
     ) = delayed {
         val account = validateToken(currentToken) ?: return@delayed null
         val (newToken, newTokenExpiration) = generateAndStoreTokenIf(refreshToken, account)
-        Api.AuthResult(account, newToken, newTokenExpiration)
+        Api.AuthResult(account, newToken, newTokenExpiration, createConnection(account))
     }
 
     override suspend fun register(
@@ -91,14 +107,10 @@ object FauxApi : Api {
     ) = delayed {
         if (accounts.containsKey(email))
             return@delayed null
-        val account = Account()
+        val account = Account(email)
         accounts[email] = PasswordEntry(account, hashPassword(password))
         val (newToken, newTokenExpiration) = generateAndStoreTokenIf(requestToken, account)
-        Api.AuthResult(account, newToken, newTokenExpiration)
-    }
-
-    override suspend fun getActiveOrder(account: Account): Order? = delayed {
-        null // TODO
+        Api.AuthResult(account, newToken, newTokenExpiration, createConnection(account))
     }
 
     private val TO_STRINGS: (Restaurant) -> List<String> = { restaurant ->
