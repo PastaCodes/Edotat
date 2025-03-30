@@ -1,6 +1,5 @@
 package at.e
 
-import android.content.Context
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
@@ -9,10 +8,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
-import at.e.ui.home.FindTable
-import at.e.ui.loading.Loading
 import at.e.ui.Transitions.slidingComposable
+import at.e.ui.home.FindTable
 import at.e.ui.home.Redirect
+import at.e.ui.loading.Loading
 import at.e.ui.login.Login
 import at.e.ui.login.Register
 import kotlinx.serialization.Serializable
@@ -47,6 +46,9 @@ object Navigation {
                     @Serializable
                     data class Search(val isInitial: Boolean = false) : Destination
                 }
+
+                @Serializable
+                data object EnterCode : Destination
             }
         }
 
@@ -57,50 +59,53 @@ object Navigation {
         data object AccountAndSettings : Destination
     }
 
-    context(Context)
     @Composable
     fun Setup(
         nc: NavHostController,
         gvm: GlobalViewModel,
         innerPadding: PaddingValues,
-        setBottomBarVisible: (Boolean) -> Unit,
     ) {
         NavHost(
             navController = nc,
             startDestination = Destination.Loading,
         ) {
             composable<Destination.Loading> {
-                Loading.Screen(innerPadding, gvm, nc)
-                setBottomBarVisible(false)
+                gvm.bottomBar(false)
+                Loading.Screen(innerPadding, gvm)
             }
             composable<Destination.Login> {
-                Login.Screen(innerPadding, gvm, nc)
-                setBottomBarVisible(false)
+                gvm.bottomBar(false)
+                Login.Screen(innerPadding, gvm)
             }
             composable<Destination.Register> {
-                Register.Screen(innerPadding, gvm, nc)
-                setBottomBarVisible(false)
+                gvm.bottomBar(false)
+                Register.Screen(innerPadding, gvm)
             }
             navigation<Destination.Home>(startDestination = Destination.Home.Redirect) {
                 composable<Destination.Home.Redirect> {
-                    Redirect(gvm, nc)
+                    Redirect(gvm)
                 }
                 slidingComposable<Destination.Home.FindTable.ChooseMethod> {
-                    FindTable.ChooseMethod.Screen(innerPadding, gvm, nc)
-                    setBottomBarVisible(true)
+                    gvm.bottomBar(true)
+                    FindTable.ChooseMethod.Screen(innerPadding, gvm)
                 }
                 slidingComposable<Destination.Home.FindTable.Method.QrCode> {
-                    // TODO
-                    setBottomBarVisible(true)
+                    gvm.bottomBar(true)
+                    FindTable.Method.QrCode.Screen(innerPadding, gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.Method.NearMe> {
-                    // TODO
-                    setBottomBarVisible(true)
+                slidingComposable<Destination.Home.FindTable.Method.NearMe> { backStackEntry ->
+                    gvm.bottomBar(true)
+                    val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.NearMe>()
+                    FindTable.Method.NearMe.Screen(innerPadding, route.isInitial, gvm)
                 }
                 slidingComposable<Destination.Home.FindTable.Method.Search> { backStackEntry ->
+                    gvm.bottomBar(true)
                     val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.Search>()
-                    FindTable.Method.Search.Screen(innerPadding, route.isInitial, nc)
-                    setBottomBarVisible(true)
+                    FindTable.Method.Search.Screen(innerPadding, route.isInitial, gvm)
+                }
+                slidingComposable<Destination.Home.FindTable.EnterCode> {
+                    gvm.bottomBar(true)
+                    FindTable.EnterCode.Screen(innerPadding, gvm)
                 }
             }
             /*

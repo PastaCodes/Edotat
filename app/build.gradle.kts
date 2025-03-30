@@ -34,7 +34,11 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
-        freeCompilerArgs += "-Xcontext-receivers"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
+        )
     }
     buildFeatures {
         compose = true
@@ -54,8 +58,11 @@ dependencies {
     implementation(libs.androidx.navigation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.preferences)
+    implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization)
     implementation(libs.android.material)
+    implementation(libs.play.services.codescanner)
+    implementation(libs.play.services.location)
     implementation(libs.fuzzywuzzy) // Required by faux api
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

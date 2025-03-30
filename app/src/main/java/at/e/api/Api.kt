@@ -1,6 +1,7 @@
 package at.e.api
 
 import at.e.api.faux.FauxApi
+import kotlin.uuid.Uuid
 
 val api: Api =
     FauxApi // Development mode only
@@ -32,5 +33,18 @@ interface Api {
 
     suspend fun register(email: String, password: String, requestToken: Boolean): AuthResult?
 
-    suspend fun getRestaurants(query: String): List<Restaurant>
+    suspend fun findTable(uuid: Uuid): Pair<Table, Restaurant>?
+
+    suspend fun getRestaurants(
+        userLocation: Location,
+        maxDistanceMeters: Float = 5000f,
+        maxCount: Int = 50,
+    ): List<Pair<Restaurant, /* distanceMeters: */ Float>>
+
+    suspend fun getRestaurants(
+        query: String,
+        maxCount: Int = 50,
+    ): List<Restaurant>
+
+    suspend fun findTable(code: String, restaurant: Restaurant): Table?
 }

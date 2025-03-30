@@ -1,12 +1,12 @@
 package at.e.ui.theme
 
-import android.content.Context
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import at.e.GlobalViewModel
 import at.e.R
 
 object EdotatTheme {
@@ -22,14 +22,13 @@ object EdotatTheme {
     fun Modifier.mediumAlpha() = this.alpha(Alpha.MEDIUM)
     fun Modifier.lowAlpha() = this.alpha(Alpha.LOW)
 
-    context(Context)
     @Composable
-    fun Apply(content: @Composable () -> Unit) {
+    fun Apply(gvm: GlobalViewModel, content: @Composable () -> Unit) {
         MaterialTheme(
             colorScheme = darkColorScheme(
-                primary = Color(getColor(R.color.primary)),
-                onPrimary = Color(getColor(R.color.on_primary)),
-                secondaryContainer = Color(getColor(R.color.secondary_container)),
+                primary = Color(gvm.app.getColor(R.color.primary)),
+                onPrimary = Color(gvm.app.getColor(R.color.on_primary)),
+                secondaryContainer = Color(gvm.app.getColor(R.color.secondary_container)),
             ),
             content = content,
         )

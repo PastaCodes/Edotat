@@ -13,10 +13,10 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val gvm: GlobalViewModel by viewModels { GlobalViewModel.Factory(application) }
             val nc = rememberNavController()
-            Common.Container(gvm, nc) { innerPadding, setBottomBarVisible ->
-                Navigation.Setup(nc, gvm, innerPadding, setBottomBarVisible)
+            val gvm: GlobalViewModel by viewModels { GlobalViewModel.Factory(application, nc) }
+            Common.Container(gvm) { innerPadding ->
+                Navigation.Setup(nc, gvm, innerPadding)
             }
         }
     }

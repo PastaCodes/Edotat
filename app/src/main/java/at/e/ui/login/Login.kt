@@ -1,6 +1,5 @@
 package at.e.ui.login
 
-import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -32,12 +31,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -48,7 +49,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.Navigation.ClearBackStack
@@ -57,29 +57,29 @@ import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
 import at.e.ui.theme.EdotatTheme.mediumAlpha
-import kotlinx.coroutines.launch
 
 object Login {
-    context(Context)
     @Composable
-    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
-        val coroutineScope = rememberCoroutineScope()
-
+    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
         val loginState by gvm.loginState.collectAsState()
         val orderState by gvm.orderState.collectAsState()
 
-        var email by rememberSaveable { mutableStateOf(
-            when (val ls = loginState) {
-                is GlobalViewModel.LoginState.Registered -> ls.account.email
-                else -> ""
-            }
-        ) }
+        var email by rememberSaveable {
+            mutableStateOf(
+                when (val ls = loginState) {
+                    is GlobalViewModel.LoginState.Registered -> ls.account.email
+                    else -> ""
+                }
+            )
+        }
         var password by rememberSaveable { mutableStateOf("") }
         var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
         var isEmailError by rememberSaveable { mutableStateOf(false) }
         var isPasswordError by rememberSaveable { mutableStateOf(false) }
         var isCredentialsError by rememberSaveable { mutableStateOf(false) }
+
+        val passwordFocus = remember { FocusRequester() }
 
         val lift = WindowInsets.ime.getBottom(LocalDensity.current) / 1400f
 
@@ -88,36 +88,42 @@ object Login {
                 is GlobalViewModel.LoginState.LoggedIn -> {
                     when (orderState) {
                         is GlobalViewModel.OrderState.Loading -> gvm.loadActiveOrder()
-                        else -> {
-                            nc.navigate(route = Navigation.Destination.Home, ClearBackStack)
+                        is GlobalViewModel.OrderState.None,
+                        is GlobalViewModel.OrderState.Active -> {
+                            gvm.nc.navigate(route = Navigation.Destination.Home, ClearBackStack)
                         }
+                        else -> { }
                     }
                 }
                 is GlobalViewModel.LoginState.ManualLoginFailed -> {
                     isEmailError = false
                     isPasswordError = false
                     isCredentialsError = true
+                    gvm.showSnackbar(messageResId = R.string.login_failed_credentials)
                     gvm.shake()
-                    gvm.showSnackbar(R.string.login_failed_credentials)
                 }
                 is GlobalViewModel.LoginState.Loading -> { }
                 else -> gvm.logout()
             }
         }
 
-        val tryLogin = {
+        LaunchedEffect(Unit) {
+            if (loginState is GlobalViewModel.LoginState.Registered) {
+                passwordFocus.requestFocus()
+            }
+        }
+
+        val submit = {
             if (
                 loginState !is GlobalViewModel.LoginState.Loading
             &&  loginState !is GlobalViewModel.LoginState.LoggedIn
             ) {
                 isEmailError = email.isBlank()
                 isPasswordError = password.isBlank()
-                coroutineScope.launch {
-                    if (email.isNotBlank() && password.isNotBlank()) {
-                        gvm.tryManualLogin(email, password)
-                    } else {
-                        gvm.shake()
-                    }
+                if (email.isNotBlank() && password.isNotBlank()) {
+                    gvm.tryManualLogin(email, password)
+                } else {
+                    gvm.shake()
                 }
             }
         }
@@ -134,7 +140,7 @@ object Login {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = getString(R.string.login_welcome_back),
+                    text = gvm.app.getString(R.string.login_welcome_back),
                     textAlign = TextAlign.Center,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -145,7 +151,7 @@ object Login {
                 OutlinedTextField(
                     label = {
                         Text(
-                            text = getString(R.string.login_email_label),
+                            text = gvm.app.getString(R.string.login_email_label),
                             fontSize = 18.sp,
                         )
                     },
@@ -161,7 +167,7 @@ object Login {
                     ),
                     placeholder = {
                         Text(
-                            text = getString(R.string.login_email_placeholder),
+                            text = gvm.app.getString(R.string.login_email_placeholder),
                             fontSize = 18.sp,
                             modifier = Modifier.mediumAlpha(),
                         )
@@ -170,14 +176,12 @@ object Login {
                     textStyle = TextStyle(fontSize = 18.sp),
                     singleLine = true,
                     isError = isEmailError || isCredentialsError,
-                    modifier = with(gvm) {
-                        Modifier.shakeable(isEmailError || isCredentialsError)
-                    },
+                    modifier = Modifier.shakeable(gvm, isEmailError || isCredentialsError),
                     supportingText = {
                         Text(
                             text =
                                 if (isEmailError)
-                                    getString(R.string.error_fill_this_field)
+                                    gvm.app.getString(R.string.error_fill_this_field)
                                 else
                                     "",
                         )
@@ -187,7 +191,7 @@ object Login {
                 OutlinedTextField(
                     label = {
                         Text(
-                            text = getString(R.string.login_password_label),
+                            text = gvm.app.getString(R.string.login_password_label),
                             fontSize = 18.sp,
                         )
                     },
@@ -201,7 +205,7 @@ object Login {
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Go,
                     ),
-                    keyboardActions = KeyboardActions(onGo = { tryLogin() }),
+                    keyboardActions = KeyboardActions(onGo = { submit() }),
                     visualTransformation =
                         if (passwordVisible)
                             VisualTransformation.None
@@ -209,7 +213,7 @@ object Login {
                             PasswordVisualTransformation(),
                     placeholder = {
                         Text(
-                            text = getString(R.string.login_password_placeholder),
+                            text = gvm.app.getString(R.string.login_password_placeholder),
                             fontSize = 18.sp,
                             modifier = Modifier.mediumAlpha(),
                         )
@@ -226,9 +230,9 @@ object Login {
                                         EdotatIcons.Invisible,
                                 contentDescription =
                                     if (passwordVisible)
-                                        getString(R.string.login_hide_password)
+                                        gvm.app.getString(R.string.login_hide_password)
                                     else
-                                        getString(R.string.login_show_password),
+                                        gvm.app.getString(R.string.login_show_password),
                             )
                         }
                     },
@@ -236,14 +240,14 @@ object Login {
                     textStyle = TextStyle(fontSize = 18.sp),
                     singleLine = true,
                     isError = isPasswordError || isCredentialsError,
-                    modifier = with(gvm) {
-                        Modifier.shakeable(isPasswordError || isCredentialsError)
-                    },
+                    modifier = Modifier
+                        .shakeable(gvm, isPasswordError || isCredentialsError)
+                        .focusRequester(passwordFocus),
                     supportingText = {
                         Text(
                             text =
                                 if (isPasswordError)
-                                    getString(R.string.error_fill_this_field)
+                                    gvm.app.getString(R.string.error_fill_this_field)
                                 else
                                     "",
                         )
@@ -255,31 +259,29 @@ object Login {
                 ) {
                     TextButton(
                         onClick = {
-                            coroutineScope.launch {
-                                isPasswordError = false
-                                isCredentialsError = false
-                                if (email.isEmpty()) {
-                                    isEmailError = true
-                                    gvm.shake()
-                                } else {
-                                    gvm.showSnackbar(
-                                        messageResId = R.string.login_reset_password_message,
-                                        actionResId = R.string.action_ok,
-                                        withDismissAction = false,
-                                    )
-                                }
+                            isPasswordError = false
+                            isCredentialsError = false
+                            if (email.isEmpty()) {
+                                isEmailError = true
+                                gvm.shake()
+                            } else {
+                                gvm.showSnackbar(
+                                    messageResId = R.string.login_reset_password_message,
+                                    actionResId = R.string.action_ok,
+                                    withDismissAction = false,
+                                )
                             }
                         },
                         shape = EdotatTheme.RoundedCornerShape,
                     ) {
                         Text(
-                            text = getString(R.string.login_forgot_password),
+                            text = gvm.app.getString(R.string.login_forgot_password),
                             fontSize = 16.sp,
                         )
                     }
                 }
                 Button(
-                    onClick = tryLogin,
+                    onClick = submit,
                     shape = EdotatTheme.RoundedCornerShape,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     enabled = loginState !is GlobalViewModel.LoginState.LoggedIn,
@@ -299,7 +301,7 @@ object Login {
                         )
                     } else {
                         Text(
-                            text = getString(R.string.login_button),
+                            text = gvm.app.getString(R.string.login_button),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                         )
@@ -309,12 +311,12 @@ object Login {
                 HorizontalDivider()
                 TextButton(
                     onClick = {
-                        nc.navigate(route = Navigation.Destination.Register)
+                        gvm.nc.navigate(route = Navigation.Destination.Register)
                     },
                     shape = EdotatTheme.RoundedCornerShape,
                 ) {
                     Text(
-                        text = getString(R.string.login_go_to_register),
+                        text = gvm.app.getString(R.string.login_go_to_register),
                         fontSize = 16.sp,
                     )
                 }

@@ -21,6 +21,12 @@ sealed interface LoadingState<out T> {
         }
     }
 
+    fun ifLoading(action: () -> Unit) {
+        if (this is Loading) {
+            action()
+        }
+    }
+
     fun isData(): Boolean
 
     val forceData

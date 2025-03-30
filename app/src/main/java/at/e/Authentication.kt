@@ -4,8 +4,9 @@ import at.e.api.Account
 import at.e.api.Api
 import at.e.api.api
 import kotlinx.coroutines.flow.first
-import java.time.Duration
-import java.time.Instant
+import kotlinx.datetime.Clock.System.now
+import kotlinx.datetime.Instant
+import kotlin.time.Duration.Companion.days
 
 object Authentication {
     private suspend fun saveToken(response: Api.AuthResult, gvm: GlobalViewModel) {
@@ -45,11 +46,8 @@ object Authentication {
         var doRefresh = true // Temporary value; only refresh if about to expire
         val tokenExpiration = gvm.userPreferences.authTokenExpiration.first()
         if (tokenExpiration != null) {
-            val timeLeft = Duration.between(
-                Instant.now(),
-                Instant.ofEpochSecond(tokenExpiration)
-            )
-            doRefresh = timeLeft < Duration.ofDays(30)
+            val timeLeft = Instant.fromEpochSeconds(tokenExpiration) - now()
+            doRefresh = timeLeft < 30.days
         }
         val requireBiometrics = gvm.userPreferences.autoLoginRequireBiometrics.first()
         if (requireBiometrics) {

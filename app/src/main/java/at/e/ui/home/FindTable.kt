@@ -1,6 +1,8 @@
 package at.e.ui.home
 
-import android.content.Context
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,10 +11,12 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,29 +25,37 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -54,7 +66,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.R
@@ -62,10 +73,15 @@ import at.e.UserPreferences
 import at.e.api.Restaurant
 import at.e.api.api
 import at.e.lib.LoadingState
+import at.e.ui.Common
+import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
+import at.e.ui.theme.EdotatTheme.mediumAlpha
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,16 +91,34 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.uuid.Uuid
 
-data object FindTable {
+object FindTable {
     object ChooseMethod {
-        context(Context)
         @Composable
-        fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
-            val vm = viewModel<VM>()
+        fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+            val orderState by gvm.orderState.collectAsState()
+
+            LaunchedEffect(orderState) {
+                when (orderState) {
+                    is GlobalViewModel.OrderState.TableNotFound -> {
+                        gvm.showSnackbar(messageResId = R.string.find_table_not_found)
+                        gvm.consumeTableError()
+                    }
+                    is GlobalViewModel.OrderState.InvalidQrCode -> {
+                        gvm.showSnackbar(messageResId = R.string.qr_code_invalid)
+                        gvm.consumeTableError()
+                    }
+                    else -> { }
+                }
+            }
+
+            // State of the "set as preferred method" checkbox
+            val (checkedState, setCheckedState) = rememberSaveable { mutableStateOf(false) }
+
             DisposableEffect(Unit) {
                 onDispose {
-                    vm.setPreferredMethod = false // Reset checkbox when leaving
+                    setCheckedState(false) // Reset checkbox when leaving
                 }
             }
 
@@ -94,13 +128,13 @@ data object FindTable {
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.aligned(BiasAlignment.Vertical(0.2f)),
             ) {
-                Header(large = true)
-                Spacer(modifier = Modifier.height(16.dp))
-                MethodButtons(vm, gvm, nc)
-                Spacer(modifier = Modifier.height(32.dp))
-                SetPreferredMethod(vm)
+                Header(large = true, gvm)
+                Spacer(Modifier.height(16.dp))
+                MethodButtons(checkedState, gvm)
+                Spacer(Modifier.height(32.dp))
+                SetPreferredMethod(checkedState, setCheckedState, gvm)
             }
         }
 
@@ -116,11 +150,8 @@ data object FindTable {
             MethodButton(EdotatIcons.Search, R.string.find_table_search, Method.Search)
         )
 
-        context(Context)
         @Composable
-        private fun MethodButtons(vm: VM, gvm: GlobalViewModel, nc: NavController) {
-            val coroutineScope = rememberCoroutineScope()
-
+        private fun MethodButtons(checkedState: Boolean, gvm: GlobalViewModel) {
             Column(
                 modifier = Modifier.width(300.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -128,16 +159,14 @@ data object FindTable {
                 methodButtons.forEach { button ->
                     Button(
                         onClick = {
-                            if (vm.setPreferredMethod) {
-                                coroutineScope.launch {
-                                    gvm.userPreferences.save(
-                                        key = UserPreferences.Keys.FindTablePreferredMethod,
-                                        value = button.method.toPreference(),
-                                    )
-                                }
+                            if (checkedState) {
+                                gvm.savePreference(
+                                    key = UserPreferences.Keys.FindTablePreferredMethod,
+                                    value = button.method.toPreference(),
+                                )
                             }
-                            nc.navigate(
-                                route = button.method.route(/* isInitial = */ false),
+                            gvm.nc.navigate(
+                                route = button.method.route(/* isInitial: */ false),
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -154,7 +183,7 @@ data object FindTable {
                                 modifier = Modifier.size(40.dp),
                             )
                             Text(
-                                text = getString(button.textResId),
+                                text = gvm.app.getString(button.textResId),
                                 fontSize = 18.sp,
                                 modifier = Modifier.fillMaxWidth(),
                                 textAlign = TextAlign.Center,
@@ -165,78 +194,50 @@ data object FindTable {
             }
         }
 
-        context(Context)
         @Composable
-        private fun SetPreferredMethod(vm: VM) {
+        private fun SetPreferredMethod(
+            checkedState: Boolean,
+            setCheckedState: (Boolean) -> Unit,
+            gvm: GlobalViewModel,
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.toggleable(
-                    value = vm.setPreferredMethod,
-                    onValueChange = { vm.setPreferredMethod = it },
+                    value = checkedState,
+                    onValueChange = setCheckedState,
                     role = Role.Checkbox
                 ),
             ) {
                 Checkbox(
-                    checked = vm.setPreferredMethod,
+                    checked = checkedState,
                     onCheckedChange = null,
                 )
                 Text(
-                    text = getString(R.string.find_table_set_preferred_method),
+                    text = gvm.app.getString(R.string.find_table_set_preferred_method),
                     fontSize = 18.sp,
                     modifier = Modifier. padding(start = 8.dp),
                 )
             }
         }
-
-        class VM : ViewModel() {
-            var setPreferredMethod by mutableStateOf(false)
-        }
     }
 
     @Composable
-    private fun Header(large: Boolean) {
+    private fun Header(large: Boolean, gvm: GlobalViewModel) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(if (large) 32.dp else 16.dp),
         ) {
             Text(
-                text = "Hungry?",
+                text = gvm.app.getString(R.string.find_table_header),
                 fontSize = if (large) 60.sp else 40.sp,
                 fontWeight = FontWeight.ExtraBold,
+                modifier = Modifier.mediumAlpha(),
             )
             Text(
-                text = "Let's find your table.",
+                text = gvm.app.getString(R.string.find_table_subheader),
                 fontSize = 26.sp,
             )
-        }
-    }
-
-    context(Context)
-    @Composable
-    private fun Back(nc: NavController) {
-        TextButton(
-            onClick = nc::navigateUp,
-            shape = MaterialTheme.shapes.medium,
-            contentPadding = PaddingValues(
-                top = 8.dp,
-                bottom = 8.dp,
-                end = 16.dp,
-            ),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = EdotatIcons.Back,
-                    contentDescription = null, // Icon is decorative
-                    modifier = Modifier.size(32.dp),
-                )
-                Text(
-                    text = getString(R.string.find_table_back),
-                    fontSize = 16.sp,
-                )
-            }
         }
     }
 
@@ -266,15 +267,66 @@ data object FindTable {
                 Search -> 3
             }
 
-        data object QrCode : Method(Navigation.Destination.Home.FindTable.Method::QrCode)
-
-        data object NearMe : Method(Navigation.Destination.Home.FindTable.Method::NearMe)
-
-        data object Search : Method(Navigation.Destination.Home.FindTable.Method::Search) {
-            context(Context)
+        data object QrCode : Method(Navigation.Destination.Home.FindTable.Method::QrCode) {
             @Composable
-            fun Screen(innerPadding: PaddingValues, isInitial: Boolean, nc: NavController) {
-                val vm = viewModel<VM>()
+            fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+                val orderState by gvm.orderState.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    val scannerOptions = GmsBarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                        .build()
+                    val scanner = GmsBarcodeScanning.getClient(gvm.app, scannerOptions)
+                    scanner.startScan()
+                        .addOnSuccessListener { barcode ->
+                            try {
+                                val rawValue = barcode.rawValue!!
+                                val uuid = Uuid.parseHex(rawValue)
+                                gvm.findTable(uuid)
+                            } catch (_: Exception) {
+                                gvm.notifyInvalidQrCode()
+                                gvm.nc.navigateUp()
+                            }
+                        }
+                        .addOnCanceledListener {
+                            gvm.nc.navigateUp()
+                        }
+                        .addOnFailureListener {
+                            gvm.notifyInvalidQrCode()
+                            gvm.nc.navigateUp()
+                        }
+                }
+
+                LaunchedEffect(orderState) {
+                    when (orderState) {
+                        is GlobalViewModel.OrderState.TableNotFound -> gvm.nc.navigateUp()
+                        is GlobalViewModel.OrderState.SelectedTable -> {
+                            gvm.nc.navigate(route = TODO())
+                        }
+                        else -> { }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .consumeWindowInsets(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+
+        data object NearMe : Method(Navigation.Destination.Home.FindTable.Method::NearMe) {
+            @Composable
+            fun Screen(
+                innerPadding: PaddingValues,
+                isInitial: Boolean,
+                gvm: GlobalViewModel,
+            ) {
+                val vm = viewModel<RestaurantsNearMeViewModel>()
 
                 Column(
                     modifier = Modifier
@@ -284,26 +336,200 @@ data object FindTable {
                         .consumeWindowInsets(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Back(nc)
+                    Common.Back(textResId = R.string.find_table_method_back, gvm)
                     if (isInitial) {
-                        Spacer(modifier = Modifier.height(32.dp))
-                        Header(large = false)
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(32.dp))
+                        Header(large = false, gvm)
+                        Spacer(Modifier.height(16.dp))
                     }
-                    SearchBar(vm)
-                    RestaurantResults(nc, vm)
+                    RestaurantResults(this@Column, vm, gvm)
                 }
             }
 
-            context(Context)
             @Composable
-            private fun SearchBar(vm: VM) {
+            private fun RestaurantResults(
+                columnScope: ColumnScope,
+                vm: RestaurantsNearMeViewModel,
+                gvm: GlobalViewModel,
+            ) {
+                val permissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestMultiplePermissions()
+                ) { permissionsResult ->
+                    val anyGranted = permissionsResult.any { it.value }
+                    if (anyGranted) {
+                        vm.fetchNearby(gvm)
+                    } else {
+                        gvm.nc.navigateUp()
+                    }
+                }
+
+                val accuracyRadiusMeters by vm.accuracyRadiusMeters.collectAsState()
+
+                val restaurants by vm.restaurants.collectAsState()
+                LaunchedEffect(restaurants) {
+                    if (restaurants is LoadingState.Loading) {
+                        permissionLauncher.launch(arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ))
+                    }
+                }
+
+                Box(
+                    modifier = with(columnScope) { Modifier.weight(1f) }
+                        .fillMaxWidth().imePadding(),
+                    contentAlignment = BiasAlignment(0f, -0.4f),
+                ) {
+                    when (val r = restaurants) {
+                        is LoadingState.Loading -> CircularProgressIndicator()
+                        is LoadingState.Data -> {
+                            if (r.data.isEmpty()) {
+                                Text(
+                                    text =
+                                        gvm.app.getString(R.string.restaurants_near_me_no_results),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            } else {
+                                RestaurantList(r.data, accuracyRadiusMeters.forceData, gvm)
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Composable
+            private fun RestaurantList(
+                restaurants: List<Pair<Restaurant, Float>>,
+                accuracyRadiusMeters: Float,
+                gvm: GlobalViewModel,
+            ) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(4.dp),
+                ) {
+                    items(restaurants) { (restaurant, distanceMeters) ->
+                        OutlinedCard(
+                            onClick = {
+                                gvm.selectRestaurant(restaurant)
+                                gvm.nc.navigate(
+                                    route = Navigation.Destination.Home.FindTable.EnterCode,
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(
+                                modifier = Modifier.height(86.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    imageVector = EdotatIcons.Restaurant,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .size(32.dp),
+                                )
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                ) {
+                                    Text(
+                                        text = restaurant.name,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Text(
+                                        text = "Distance: $distanceMeters, Accuracy: $accuracyRadiusMeters",
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = EdotatIcons.Forward,
+                                    contentDescription = null, // Icon is decorative
+                                    modifier = Modifier
+                                        .padding(horizontal = 24.dp)
+                                        .size(24.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            class RestaurantsNearMeViewModel : ViewModel() {
+                private val _accuracyRadiusMeters = LoadingState.flow<Float>()
+                val accuracyRadiusMeters = _accuracyRadiusMeters.asStateFlow()
+
+                private val _restaurants = LoadingState.flow<List<Pair<Restaurant, Float>>>()
+                val restaurants = _restaurants.asStateFlow()
+
+                fun fetchNearby(gvm: GlobalViewModel) {
+                    gvm.getUserLocation { userLocation, accuracyRadiusMeters ->
+                        viewModelScope.launch(Dispatchers.IO) {
+                            _accuracyRadiusMeters.value = LoadingState.Data(accuracyRadiusMeters)
+                            _restaurants.value = LoadingState.Data(api.getRestaurants(userLocation))
+                        }
+                    }
+                }
+            }
+        }
+
+        data object Search : Method(Navigation.Destination.Home.FindTable.Method::Search) {
+            @Composable
+            fun Screen(
+                innerPadding: PaddingValues,
+                isInitial: Boolean,
+                gvm: GlobalViewModel,
+            ) {
+                val vm = viewModel<RestaurantsViewModel>()
+
+                val isBack = gvm.nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
+                gvm.nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(24.dp)
+                        .consumeWindowInsets(innerPadding),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Common.Back(textResId = R.string.find_table_method_back, gvm)
+                    if (isInitial) {
+                        val lift = WindowInsets.ime.getBottom(LocalDensity.current) / 800f
+
+                        Spacer(Modifier.height(32.dp - (24 * lift).dp))
+                        Header(large = false, gvm)
+                        Spacer(Modifier.height(16.dp - (12 * lift).dp))
+                    }
+                    SearchBar(isInitial, isBack, vm, gvm)
+                    RestaurantResults(this@Column, vm, gvm)
+                }
+            }
+
+            @Composable
+            private fun SearchBar(
+                isInitial: Boolean,
+                isBack: Boolean,
+                vm: RestaurantsViewModel,
+                gvm: GlobalViewModel,
+            ) {
                 val query by vm.query.collectAsState()
+
+                val searchBarFocus = remember { FocusRequester() }
+                LaunchedEffect(Unit) {
+                    if (!isInitial && !isBack) {
+                        searchBarFocus.requestFocus()
+                    }
+                }
 
                 OutlinedTextField(
                     value = query,
                     onValueChange = vm::setQuery,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().focusRequester(searchBarFocus),
                     shape = CircleShape,
                     leadingIcon = {
                         Icon(
@@ -319,7 +545,8 @@ data object FindTable {
                             ) {
                                 Icon(
                                     imageVector = EdotatIcons.Close,
-                                    contentDescription = getString(R.string.icon_clear_search),
+                                    contentDescription =
+                                        gvm.app.getString(R.string.icon_clear_search),
                                     modifier = Modifier.padding(end = 12.dp),
                                 )
                             }
@@ -327,7 +554,7 @@ data object FindTable {
                     },
                     placeholder = {
                         Text(
-                            text = getString(R.string.search_restaurants),
+                            text = gvm.app.getString(R.string.search_restaurants),
                         )
                     },
                     singleLine = true,
@@ -338,13 +565,17 @@ data object FindTable {
                 )
             }
 
-            context(Context, ColumnScope)
             @Composable
-            private fun RestaurantResults(nc: NavController, vm: VM) {
+            private fun RestaurantResults(
+                columnScope: ColumnScope,
+                vm: RestaurantsViewModel,
+                gvm: GlobalViewModel,
+            ) {
                 val restaurants by vm.restaurants.collectAsState()
 
                 Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth().imePadding(),
+                    modifier = with(columnScope) { Modifier.weight(1f) }
+                        .fillMaxWidth().imePadding(),
                     contentAlignment = BiasAlignment(0f, -0.4f),
                 ) {
                     when (val r = restaurants) {
@@ -352,12 +583,13 @@ data object FindTable {
                         is LoadingState.Data -> {
                             if (r.data.isEmpty()) {
                                 Text(
-                                    text = getString(R.string.search_restaurants_no_results),
+                                    text =
+                                        gvm.app.getString(R.string.search_restaurants_no_results),
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             } else {
-                                RestaurantList(r.data, nc)
+                                RestaurantList(r.data, gvm)
                             }
                         }
                     }
@@ -365,7 +597,10 @@ data object FindTable {
             }
 
             @Composable
-            private fun RestaurantList(restaurants: List<Restaurant>, nc: NavController) {
+            private fun RestaurantList(
+                restaurants: List<Restaurant>,
+                gvm: GlobalViewModel,
+            ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -374,7 +609,10 @@ data object FindTable {
                     items(restaurants) { restaurant ->
                         OutlinedCard(
                             onClick = {
-                                nc.navigate(route = TODO())
+                                gvm.selectRestaurant(restaurant)
+                                gvm.nc.navigate(
+                                    route = Navigation.Destination.Home.FindTable.EnterCode,
+                                )
                             },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
@@ -418,8 +656,7 @@ data object FindTable {
                 }
             }
 
-            @OptIn(ExperimentalCoroutinesApi::class)
-            class VM : ViewModel() {
+            class RestaurantsViewModel : ViewModel() {
                 private val _query = MutableStateFlow("")
                 val query = _query.asStateFlow()
 
@@ -442,6 +679,188 @@ data object FindTable {
                             }
                         }
                         .stateIn(viewModelScope, SharingStarted.Lazily, LoadingState.Loading)
+            }
+        }
+    }
+
+    object EnterCode {
+        @Composable
+        fun Screen(
+            innerPadding: PaddingValues,
+            gvm: GlobalViewModel,
+        ) {
+            val isBack = gvm.nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
+            gvm.nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
+
+            val orderState by gvm.orderState.collectAsState()
+            val selectedRestaurant = rememberSaveable {
+                (orderState as GlobalViewModel.OrderState.SelectedRestaurant).restaurant.name
+            }
+
+            var code by rememberSaveable { mutableStateOf("") }
+            var isEmptyError by rememberSaveable { mutableStateOf(false) }
+            var isNotFoundError by rememberSaveable { mutableStateOf(false) }
+
+            val lift = WindowInsets.ime.getBottom(LocalDensity.current) / 1200f
+
+            LaunchedEffect(orderState) {
+                when (orderState) {
+                    is GlobalViewModel.OrderState.SelectedTable -> {
+                        gvm.nc.navigate(route = TODO())
+                    }
+                    is GlobalViewModel.OrderState.TableCodeNotFound -> {
+                        isNotFoundError = true
+                        gvm.showSnackbar(messageResId = R.string.find_table_not_found)
+                    }
+                    else -> { }
+                }
+            }
+
+            val codeFocus = remember { FocusRequester() }
+            LaunchedEffect(Unit) {
+                if (!isBack) {
+                    codeFocus.requestFocus()
+                }
+            }
+
+            val submit = {
+                if (
+                    orderState !is GlobalViewModel.OrderState.Loading
+                &&  orderState !is GlobalViewModel.OrderState.SelectedTable
+                ) {
+                    isEmptyError = code.isBlank()
+                    if (!isEmptyError) {
+                        gvm.findTableByCode(code)
+                    } else {
+                        gvm.shake()
+                    }
+                }
+            }
+
+            @Composable
+            fun ColumnScope.MainBox() {
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = BiasAlignment(0f, -lift),
+                ) {
+                    Column(
+                        modifier = Modifier.width(280.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            text = gvm.app.getString(R.string.find_table_enter_code_header),
+                            textAlign = TextAlign.Center,
+                            fontSize = 40.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 40.sp,
+                            modifier = Modifier.mediumAlpha(),
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = gvm.app.getString(R.string.find_table_enter_code_subheader),
+                            textAlign = TextAlign.Center,
+                            fontSize = 26.sp,
+                            lineHeight = 28.sp,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        OutlinedTextField(
+                            value = code,
+                            onValueChange = {
+                                isEmptyError = false
+                                isNotFoundError = false
+                                code = it
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Ascii,
+                                imeAction = ImeAction.Go,
+                            ),
+                            keyboardActions = KeyboardActions(onGo = { submit() }),
+                            shape = EdotatTheme.RoundedCornerShape,
+                            textStyle = TextStyle(
+                                fontSize = 40.sp,
+                                textAlign = TextAlign.Center,
+                            ),
+                            singleLine = true,
+                            isError = isEmptyError || isNotFoundError,
+                            modifier = Modifier
+                                .width(160.dp)
+                                .focusRequester(codeFocus)
+                                .shakeable(gvm, isEmptyError),
+                            supportingText = {
+                                Text(
+                                    text =
+                                        if (isEmptyError)
+                                            gvm.app.getString(R.string.error_fill_this_field)
+                                        else
+                                            "",
+                                )
+                            },
+                        )
+                        Spacer(Modifier.height(32.dp - (24 * lift).dp))
+                        Button(
+                            onClick = submit,
+                            shape = EdotatTheme.RoundedCornerShape,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            enabled = orderState !is GlobalViewModel.OrderState.SelectedTable,
+                        ) {
+                            if (
+                                orderState is GlobalViewModel.OrderState.Loading
+                            ||  orderState is GlobalViewModel.OrderState.SelectedTable
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 3.dp,
+                                    color =
+                                        if (orderState !is GlobalViewModel.OrderState.SelectedTable)
+                                            MaterialTheme.colorScheme.onPrimary
+                                        else
+                                            ButtonDefaults.buttonColors().disabledContentColor
+                                )
+                            } else {
+                                Text(
+                                    text = gvm.app.getString(R.string.find_table_enter_code_button),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp)
+                    .consumeWindowInsets(innerPadding),
+            ) {
+                Common.Back(textResId = R.string.find_table_enter_code_back, gvm)
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth().weight(1f).padding(12.dp, 24.dp),
+                ) {
+                    Column {
+                        Row(
+                            modifier = Modifier.height(86.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = EdotatIcons.Restaurant,
+                                contentDescription = null, // Icon is decorative
+                                modifier = Modifier
+                                    .padding(horizontal = 24.dp)
+                                    .size(32.dp),
+                            )
+                            Text(
+                                text = selectedRestaurant,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        HorizontalDivider()
+                        MainBox()
+                    }
+                }
             }
         }
     }

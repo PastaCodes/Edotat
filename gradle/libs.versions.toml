@@ -1,6 +1,6 @@
 [versions]
 agp = "8.8.2"
-kotlin = "2.0.0"
+kotlin = "2.0.21"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -12,8 +12,11 @@ composeUi = "1.7.8"
 material3 = "1.3.1"
 navigation = "2.8.9"
 preferences = "1.1.4"
+datetime = "0.6.2"
 serialization = "1.6.3"
 material = "1.12.0"
+playServicesCodeScanner = "16.1.0"
+playServicesLocation = "21.3.0"
 fuzzywuzzy = "1.0.1" # Required by faux api
 
 [libraries]
@@ -35,8 +38,11 @@ androidx-material-icons-extended = { group = "androidx.compose.material", name =
 androidx-navigation = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleRuntimeKtx" }
 androidx-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "preferences" }
+kotlinx-datetime = { group = "org.jetbrains.kotlinx", name = "kotlinx-datetime", version.ref = "datetime" }
 kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 android-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+play-services-codescanner = { group = "com.google.android.gms", name = "play-services-code-scanner", version.ref = "playServicesCodeScanner" }
+play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
 fuzzywuzzy = { group = "com.github.jens-muenker", name = "fuzzywuzzy-kotlin", version.ref = "fuzzywuzzy" } # Required by faux api
 
 [plugins]

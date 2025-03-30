@@ -1,6 +1,5 @@
 package at.e.ui.login
 
-import android.content.Context
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -33,7 +32,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -50,7 +48,6 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.Navigation.ClearBackStack
@@ -60,14 +57,10 @@ import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
 import at.e.ui.theme.EdotatTheme.mediumAlpha
-import kotlinx.coroutines.launch
 
 object Register {
-    context(Context)
     @Composable
-    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
-        val coroutineScope = rememberCoroutineScope()
-
+    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
         val loginState by gvm.loginState.collectAsState()
 
         var email by rememberSaveable { mutableStateOf("") }
@@ -88,7 +81,7 @@ object Register {
                         actionResId = R.string.action_ok,
                         withDismissAction = false,
                         action = {
-                            nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
+                            gvm.nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
                         }
                     )
                 }
@@ -96,27 +89,25 @@ object Register {
                     isEmailError = true
                     isPasswordError = false
                     gvm.shake()
-                    gvm.showSnackbar(R.string.register_failed_credentials)
+                    gvm.showSnackbar(messageResId = R.string.register_failed_credentials)
                 }
                 is GlobalViewModel.LoginState.Loading -> { }
                 else -> gvm.logout()
             }
         }
 
-        val tryRegister = {
+        val submit = {
             if (
                 loginState !is GlobalViewModel.LoginState.Loading
             &&  loginState !is GlobalViewModel.LoginState.Registered
             ) {
                 isEmailError = email.isBlank()
                 isPasswordError = password.isBlank()
-                coroutineScope.launch {
-                    if (email.isNotBlank() && password.isNotBlank()) {
-                        gvm.userPreferences.save(UserPreferences.Keys.AutoLogin, stayLoggedIn)
-                        gvm.tryRegister(email, password)
-                    } else {
-                        gvm.shake()
-                    }
+                if (email.isNotBlank() && password.isNotBlank()) {
+                    gvm.savePreference(UserPreferences.Keys.AutoLogin, stayLoggedIn)
+                    gvm.tryRegister(email, password)
+                } else {
+                    gvm.shake()
                 }
             }
         }
@@ -133,7 +124,7 @@ object Register {
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = getString(R.string.register_welcome),
+                    text = gvm.app.getString(R.string.register_welcome),
                     textAlign = TextAlign.Center,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.ExtraBold,
@@ -144,7 +135,7 @@ object Register {
                 OutlinedTextField(
                     label = {
                         Text(
-                            text = getString(R.string.login_email_label),
+                            text = gvm.app.getString(R.string.login_email_label),
                             fontSize = 18.sp,
                         )
                     },
@@ -159,7 +150,7 @@ object Register {
                     ),
                     placeholder = {
                         Text(
-                            text = getString(R.string.login_email_placeholder),
+                            text = gvm.app.getString(R.string.login_email_placeholder),
                             fontSize = 18.sp,
                             modifier = Modifier.mediumAlpha(),
                         )
@@ -168,14 +159,12 @@ object Register {
                     textStyle = TextStyle(fontSize = 18.sp),
                     singleLine = true,
                     isError = isEmailError,
-                    modifier = with(gvm) {
-                        Modifier.shakeable(isEmailError)
-                    },
+                    modifier = Modifier.shakeable(gvm, isEmailError),
                     supportingText = {
                         Text(
                             text =
                                 if (isEmailError)
-                                    getString(R.string.error_fill_this_field)
+                                    gvm.app.getString(R.string.error_fill_this_field)
                                 else
                                     "",
                         )
@@ -185,7 +174,7 @@ object Register {
                 OutlinedTextField(
                     label = {
                         Text(
-                            text = getString(R.string.login_password_label),
+                            text = gvm.app.getString(R.string.login_password_label),
                             fontSize = 18.sp,
                         )
                     },
@@ -198,7 +187,7 @@ object Register {
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Go,
                     ),
-                    keyboardActions = KeyboardActions(onGo = { tryRegister() }),
+                    keyboardActions = KeyboardActions(onGo = { submit() }),
                     visualTransformation =
                         if (passwordVisible)
                             VisualTransformation.None
@@ -206,7 +195,7 @@ object Register {
                             PasswordVisualTransformation(),
                     placeholder = {
                         Text(
-                            text = getString(R.string.login_password_placeholder),
+                            text = gvm.app.getString(R.string.login_password_placeholder),
                             fontSize = 18.sp,
                             modifier = Modifier.mediumAlpha(),
                         )
@@ -223,9 +212,9 @@ object Register {
                                         EdotatIcons.Invisible,
                                 contentDescription =
                                     if (passwordVisible)
-                                        getString(R.string.login_hide_password)
+                                        gvm.app.getString(R.string.login_hide_password)
                                     else
-                                        getString(R.string.login_show_password),
+                                        gvm.app.getString(R.string.login_show_password),
                             )
                         }
                     },
@@ -233,14 +222,12 @@ object Register {
                     textStyle = TextStyle(fontSize = 18.sp),
                     singleLine = true,
                     isError = isPasswordError,
-                    modifier = with(gvm) {
-                        Modifier.shakeable(isPasswordError)
-                    },
+                    modifier = Modifier.shakeable(gvm, isPasswordError),
                     supportingText = {
                         Text(
                             text =
                                 if (isPasswordError)
-                                    getString(R.string.error_fill_this_field)
+                                    gvm.app.getString(R.string.error_fill_this_field)
                                 else
                                     "",
                         )
@@ -263,7 +250,7 @@ object Register {
                             onCheckedChange = null,
                         )
                         Text(
-                            text = getString(R.string.register_stay_logged_in),
+                            text = gvm.app.getString(R.string.register_stay_logged_in),
                             fontSize = 18.sp,
                             modifier = Modifier.padding(start = 8.dp),
                         )
@@ -271,7 +258,7 @@ object Register {
                 }
                 Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = tryRegister,
+                    onClick = submit,
                     shape = EdotatTheme.RoundedCornerShape,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     enabled = loginState !is GlobalViewModel.LoginState.Registered,
@@ -284,7 +271,7 @@ object Register {
                         )
                     } else {
                         Text(
-                            text = getString(R.string.register_button),
+                            text = gvm.app.getString(R.string.register_button),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                         )
@@ -294,12 +281,12 @@ object Register {
                 HorizontalDivider()
                 TextButton(
                     onClick = {
-                        nc.navigate(route = Navigation.Destination.Login)
+                        gvm.nc.navigate(route = Navigation.Destination.Login)
                     },
                     shape = EdotatTheme.RoundedCornerShape,
                 ) {
                     Text(
-                        text = getString(R.string.register_go_to_login),
+                        text = gvm.app.getString(R.string.register_go_to_login),
                         fontSize = 16.sp,
                     )
                 }

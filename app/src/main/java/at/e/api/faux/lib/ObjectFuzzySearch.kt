@@ -1,16 +1,15 @@
 package at.e.api.faux.lib
 
+import at.e.lib.times
 import com.frosch2010.fuzzywuzzy_kotlin.FuzzySearch
 
 object ObjectFuzzySearch {
-    private fun Boolean.toInt() = if (this) 1 else 0
-
     // My best effort at a scoring function that feels natural
     private fun score(query: String, string: String) =
         FuzzySearch.ratio(query, string) +
         query.length * FuzzySearch.ratio(query, string.take(query.length)) +
-        1000 * string.startsWith(query, ignoreCase = true).toInt() +
-        500 * query.length * string.contains(query, ignoreCase = true).toInt()
+        1000 * string.startsWith(query, ignoreCase = true) +
+        500 * query.length * string.contains(query, ignoreCase = true)
 
     fun <T> extractSorted(
         query: String,
