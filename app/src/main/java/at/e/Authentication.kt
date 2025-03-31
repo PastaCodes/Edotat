@@ -20,6 +20,8 @@ object Authentication {
                     UserPreferences.Keys.AuthTokenExpiration,
                     response.newTokenExpiration
                 )
+            } else {
+                gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenExpiration)
             }
             gvm.userPreferences.save(
                 UserPreferences.Keys.AuthTokenEmail,
@@ -67,6 +69,11 @@ object Authentication {
         password: String,
         gvm: GlobalViewModel,
     ): Pair<Account, Api.Connection>? {
+        if (gvm.userPreferences.authTokenEmail.first() != email) {
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthToken)
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenExpiration)
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenEmail)
+        }
         val requestToken = gvm.userPreferences.autoLogin.first()
         val response = api.authenticate(email, password, requestToken) ?: return null
         if (requestToken) {
@@ -91,6 +98,11 @@ object Authentication {
         password: String,
         gvm: GlobalViewModel,
     ): Account? {
+        if (gvm.userPreferences.authTokenEmail.first() != email) {
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthToken)
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenExpiration)
+            gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenEmail)
+        }
         val requestToken = gvm.userPreferences.autoLogin.first()
         val response = api.register(email, password, requestToken) ?: return null
         if (requestToken) {

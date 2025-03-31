@@ -71,7 +71,11 @@ object FauxApi : Api {
         account: Account?,
     ) =
         if (generateCondition) {
-            val (token, expiration) = generateToken()
+            val (token, expiration) =
+                if (account?.email == "dummy")
+                    "dummy" to Instant.DISTANT_FUTURE.epochSeconds
+                else
+                    generateToken()
             if (account != null) {
                 tokens[token] = TokenEntry(account, expiration)
             }
@@ -199,5 +203,6 @@ object FauxApi : Api {
         val account = Account("dummy")
         val password = "dummy"
         accounts[account.email] = PasswordEntry(account, hashPassword(password))
+        tokens["dummy"] = TokenEntry(account, Instant.DISTANT_FUTURE.epochSeconds)
     }
 }

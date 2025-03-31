@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +62,8 @@ import at.e.ui.theme.EdotatTheme.mediumAlpha
 object Login {
     @Composable
     fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+        val crs = rememberCoroutineScope()
+
         val loginState by gvm.loginState.collectAsState()
         val orderState by gvm.orderState.collectAsState()
 
@@ -100,7 +103,7 @@ object Login {
                     isPasswordError = false
                     isCredentialsError = true
                     gvm.showSnackbar(messageResId = R.string.login_failed_credentials)
-                    gvm.shake()
+                    gvm.shake(crs)
                 }
                 is GlobalViewModel.LoginState.Loading -> { }
                 else -> gvm.logout()
@@ -123,7 +126,7 @@ object Login {
                 if (email.isNotBlank() && password.isNotBlank()) {
                     gvm.tryManualLogin(email, password)
                 } else {
-                    gvm.shake()
+                    gvm.shake(crs)
                 }
             }
         }
@@ -263,7 +266,7 @@ object Login {
                             isCredentialsError = false
                             if (email.isEmpty()) {
                                 isEmailError = true
-                                gvm.shake()
+                                gvm.shake(crs)
                             } else {
                                 gvm.showSnackbar(
                                     messageResId = R.string.login_reset_password_message,

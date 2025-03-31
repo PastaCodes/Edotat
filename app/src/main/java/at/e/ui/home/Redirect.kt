@@ -6,7 +6,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import at.e.GlobalViewModel
 import at.e.Navigation
-import at.e.ui.home.FindTable.Method.Companion.toRoute
 
 @Composable
 fun Redirect(gvm: GlobalViewModel) {
@@ -21,7 +20,9 @@ fun Redirect(gvm: GlobalViewModel) {
             val findTableMethodPreference = FindTable.Method.fromPreference(ftmpState.forceData)
             gvm.nc.popBackStack() // Forget redirect
             gvm.nc.navigate(route = Navigation.Destination.Home.FindTable.ChooseMethod)
-            gvm.nc.navigate(route = findTableMethodPreference.toRoute(isInitial = true))
+            if (findTableMethodPreference != null) {
+                gvm.nc.navigate(route = findTableMethodPreference.route(/* isInitial = */ true))
+            }
         }
     }
 }

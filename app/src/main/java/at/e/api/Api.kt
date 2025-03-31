@@ -13,7 +13,7 @@ interface Api {
         suspend fun close()
     }
 
-    class AuthResult(
+    data class AuthResult(
         val account: Account,
         val newToken: String? = null,
         val newTokenExpiration: Long? = null,

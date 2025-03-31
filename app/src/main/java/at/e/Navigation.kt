@@ -2,6 +2,8 @@ package at.e
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
@@ -14,9 +16,11 @@ import at.e.ui.home.Redirect
 import at.e.ui.loading.Loading
 import at.e.ui.login.Login
 import at.e.ui.login.Register
+import at.e.ui.settings.AccountAndSettings
 import kotlinx.serialization.Serializable
 
 object Navigation {
+    @Serializable
     sealed interface Destination {
         @Serializable
         data object Loading : Destination
@@ -29,6 +33,7 @@ object Navigation {
 
         @Serializable
         data object Home : Destination {
+
             @Serializable
             data object Redirect : Destination
 
@@ -56,7 +61,11 @@ object Navigation {
         data object RecentOrders : Destination
 
         @Serializable
-        data object AccountAndSettings : Destination
+        data object AccountAndSettings : Destination {
+
+            @Serializable
+            data object Main : Destination
+        }
     }
 
     @Composable
@@ -112,10 +121,43 @@ object Navigation {
             navigation<Destination.RecentOrders>(startDestination = TODO()) {
                 // TODO
             }
-            navigation<Destination.AccountAndSettings>(startDestination = TODO()) {
-                // TODO
+            */
+            navigation<Destination.AccountAndSettings>(
+                startDestination = Destination.AccountAndSettings.Main,
+            ) {
+                composable<Destination.AccountAndSettings.Main> {
+                    gvm.bottomBar(true)
+                    AccountAndSettings.Screen(innerPadding, gvm)
+                }
             }
-             */
+        }
+    }
+
+    private val tabPrefixes =
+        listOf(Destination.Home, Destination.RecentOrders, Destination.AccountAndSettings)
+            .associateBy { it::class.qualifiedName!! }
+
+    fun getTab(destination: NavDestination): Destination? {
+        val currentRoute = destination.route ?: return null
+        return tabPrefixes.entries
+            .firstOrNull { (prefix, _) -> currentRoute.startsWith(prefix) }
+            ?.value
+    }
+
+    fun switchTab(tab: Destination, nc: NavController) {
+        when (tab) {
+            Destination.Home -> {
+                nc.navigate(route = Destination.Home, ClearBackStack)
+            }
+            Destination.RecentOrders -> {
+                nc.navigate(route = Destination.Home, ClearBackStack)
+                nc.navigate(route = Destination.RecentOrders)
+            }
+            Destination.AccountAndSettings -> {
+                nc.navigate(route = Destination.Home, ClearBackStack)
+                nc.navigate(route = Destination.AccountAndSettings)
+            }
+            else -> throw IllegalArgumentException()
         }
     }
 

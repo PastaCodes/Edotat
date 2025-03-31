@@ -21,9 +21,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,38 +67,41 @@ object Common {
     private data class BottomButton(
         val imageVector: ImageVector,
         @StringRes val textResId: Int,
-        val route: Any,
+        val route: Navigation.Destination,
     )
 
     private val bottomButtons = arrayOf(
         BottomButton(
             EdotatIcons.Meal,
             R.string.bottom_bar_home,
-            Navigation.Destination.Home
+            Navigation.Destination.Home,
         ),
         BottomButton(
             EdotatIcons.Recent,
             R.string.bottom_bar_orders,
-            Navigation.Destination.RecentOrders
+            Navigation.Destination.RecentOrders,
         ),
         BottomButton(
             EdotatIcons.Account,
             R.string.bottom_bar_account_and_settings,
-            Navigation.Destination.AccountAndSettings
+            Navigation.Destination.AccountAndSettings,
         ),
     )
 
     @Composable
     fun BottomBar(gvm: GlobalViewModel) {
-        var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+        val currentTab by gvm.currentTab.collectAsState()
 
         NavigationBar {
-            bottomButtons.forEachIndexed { index, button ->
+            bottomButtons.forEach { button ->
+                val selected = currentTab == button.route
+
                 NavigationBarItem(
-                    selected = selectedTabIndex == index,
+                    selected = selected,
                     onClick = {
-                        selectedTabIndex = index
-                        gvm.nc.navigate(route = button.route)
+                        if (!selected) {
+                            Navigation.switchTab(button.route, gvm.nc)
+                        }
                     },
                     icon = {
                         Icon(

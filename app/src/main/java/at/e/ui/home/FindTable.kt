@@ -48,6 +48,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,7 +73,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.R
-import at.e.UserPreferences
 import at.e.api.Restaurant
 import at.e.api.api
 import at.e.lib.LoadingState
@@ -181,10 +181,7 @@ object FindTable {
                     Button(
                         onClick = {
                             if (checkedState) {
-                                gvm.savePreference(
-                                    key = UserPreferences.Keys.FindTablePreferredMethod,
-                                    value = button.method.toPreference(),
-                                )
+                                gvm.savePreferredMethod(button.method)
                             }
                             gvm.nc.navigate(
                                 route = button.method.route(/* isInitial: */ false),
@@ -724,6 +721,8 @@ object FindTable {
             innerPadding: PaddingValues,
             gvm: GlobalViewModel,
         ) {
+            val crs = rememberCoroutineScope()
+
             val isBack = gvm.nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
             gvm.nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
 
@@ -767,7 +766,7 @@ object FindTable {
                     if (!isEmptyError) {
                         gvm.findTableByCode(code)
                     } else {
-                        gvm.shake()
+                        gvm.shake(crs)
                     }
                 }
             }

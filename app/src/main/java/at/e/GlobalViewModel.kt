@@ -30,9 +30,11 @@ import at.e.api.Restaurant
 import at.e.api.Table
 import at.e.api.api
 import at.e.lib.LoadingState
+import at.e.ui.home.FindTable
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,6 +58,9 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
     private val _bottomBar = MutableStateFlow(false)
     val bottomBar = _bottomBar.asStateFlow()
 
+    private val _currentTab = MutableStateFlow<Navigation.Destination?>(null)
+    val currentTab = _currentTab.asStateFlow()
+
     private val snackbarHostState = SnackbarHostState()
 
     private val shakeAnimation = Animatable(0f)
@@ -69,10 +74,21 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(app)
 
+    init {
+        nc.addOnDestinationChangedListener { _, destination, _ ->
+            _currentTab.value = Navigation.getTab(destination)
+        }
+    }
+
     fun <T> savePreference(key: Preferences.Key<T>, value: T) {
         viewModelScope.launch {
             userPreferences.save(key, value)
         }
+    }
+
+    fun savePreferredMethod(method: FindTable.Method) {
+        _findTableMethodPreference.value = LoadingState.Data(method.toPreference())
+        savePreference(UserPreferences.Keys.FindTablePreferredMethod, method.toPreference())
     }
 
     fun bottomBar(active: Boolean) {
@@ -228,12 +244,13 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
     }
 
     fun shake(
+        crs: CoroutineScope,
         iterations: Int = 3,
         amplitude: Dp = 4.dp,
         durationMillis: Int = 100,
     ) {
         shakeAmplitude = amplitude
-        viewModelScope.launch {
+        crs.launch {
             shakeAnimation.animateTo(
                 targetValue = 0f,
                 animationSpec = repeatable(

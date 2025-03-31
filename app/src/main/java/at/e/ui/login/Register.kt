@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -61,6 +62,8 @@ import at.e.ui.theme.EdotatTheme.mediumAlpha
 object Register {
     @Composable
     fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+        val crs = rememberCoroutineScope()
+
         val loginState by gvm.loginState.collectAsState()
 
         var email by rememberSaveable { mutableStateOf("") }
@@ -88,7 +91,7 @@ object Register {
                 is GlobalViewModel.LoginState.RegisterFailed -> {
                     isEmailError = true
                     isPasswordError = false
-                    gvm.shake()
+                    gvm.shake(crs)
                     gvm.showSnackbar(messageResId = R.string.register_failed_credentials)
                 }
                 is GlobalViewModel.LoginState.Loading -> { }
@@ -107,7 +110,7 @@ object Register {
                     gvm.savePreference(UserPreferences.Keys.AutoLogin, stayLoggedIn)
                     gvm.tryRegister(email, password)
                 } else {
-                    gvm.shake()
+                    gvm.shake(crs)
                 }
             }
         }
