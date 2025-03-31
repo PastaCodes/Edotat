@@ -19,6 +19,7 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
     }
 
     object Keys {
+        val NeverLoggedIn = booleanPreferencesKey("never_logged_in")
         val AuthToken = stringPreferencesKey("auth_token")
         val AuthTokenExpiration = longPreferencesKey("auth_token_expiration")
         val AuthTokenEmail = stringPreferencesKey("auth_token_email")
@@ -26,6 +27,9 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
         val AutoLoginRequireBiometrics = booleanPreferencesKey("auto_login_require_biometrics")
         val FindTablePreferredMethod = intPreferencesKey("find_table_preferred_method")
     }
+
+    val neverLoggedIn =
+        dataStore.data.map { it[Keys.NeverLoggedIn] ?: true }
 
     val authToken =
         dataStore.data.map { it[Keys.AuthToken] }

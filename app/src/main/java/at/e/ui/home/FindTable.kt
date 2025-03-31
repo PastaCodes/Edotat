@@ -1,6 +1,9 @@
 package at.e.ui.home
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
@@ -91,6 +94,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import kotlin.uuid.Uuid
 
 object FindTable {
@@ -98,6 +102,7 @@ object FindTable {
         @Composable
         fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
             val orderState by gvm.orderState.collectAsState()
+            val missingLocationPermissions by gvm.missingLocationPermissions.collectAsState()
 
             LaunchedEffect(orderState) {
                 when (orderState) {
@@ -119,6 +124,22 @@ object FindTable {
             DisposableEffect(Unit) {
                 onDispose {
                     setCheckedState(false) // Reset checkbox when leaving
+                }
+            }
+
+            LaunchedEffect(missingLocationPermissions) {
+                if (missingLocationPermissions) {
+                    gvm.showSnackbar(
+                        messageResId = R.string.permissions_location_missing,
+                        actionResId = R.string.action_open_settings,
+                        withDismissAction = true,
+                    ) {
+                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        intent.data = Uri.fromParts("package", gvm.app.packageName, null)
+                        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        gvm.app.startActivity(intent)
+                    }
+                    gvm.consumeMissingLocationPermissions()
                 }
             }
 
@@ -359,6 +380,7 @@ object FindTable {
                     if (anyGranted) {
                         vm.fetchNearby(gvm)
                     } else {
+                        gvm.notifyMissingLocationPermissions()
                         gvm.nc.navigateUp()
                     }
                 }
@@ -398,6 +420,9 @@ object FindTable {
                 }
             }
 
+            private fun roundDistance(distance: Float) =
+                (distance / 100).roundToInt() * 100
+
             @Composable
             private fun RestaurantList(
                 restaurants: List<Pair<Restaurant, Float>>,
@@ -409,7 +434,12 @@ object FindTable {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(4.dp),
                 ) {
-                    items(restaurants) { (restaurant, distanceMeters) ->
+                    items(restaurants) { (restaurant, distance) ->
+                        val distanceMetersRange = IntRange(
+                            roundDistance((distance - accuracyRadiusMeters).coerceAtLeast(0f)),
+                            roundDistance((distance + accuracyRadiusMeters).coerceAtLeast(0f))
+                        )
+
                         OutlinedCard(
                             onClick = {
                                 gvm.selectRestaurant(restaurant)
@@ -441,7 +471,12 @@ object FindTable {
                                         overflow = TextOverflow.Ellipsis,
                                     )
                                     Text(
-                                        text = "Distance: $distanceMeters, Accuracy: $accuracyRadiusMeters",
+                                        text =
+                                            gvm.app.getString(R.string.restaurants_near_me_distance)
+                                                .format(
+                                                    distanceMetersRange.first,
+                                                    distanceMetersRange.last,
+                                                ),
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )

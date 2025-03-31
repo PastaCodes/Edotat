@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.lib.LoadingState
+import kotlinx.coroutines.flow.first
 
 object Loading {
     @Composable
@@ -30,8 +31,15 @@ object Loading {
             when (loginState) {
                 is GlobalViewModel.LoginState.Loading -> gvm.tryAutoLogin()
                 is GlobalViewModel.LoginState.AutoLoginFailed -> {
+                    val neverLoggedIn = gvm.userPreferences.neverLoggedIn.first()
                     gvm.nc.popBackStack() // Forget loading screen
-                    gvm.nc.navigate(route = Navigation.Destination.Login)
+                    gvm.nc.navigate(
+                        route =
+                            if (neverLoggedIn)
+                                Navigation.Destination.Register
+                            else
+                                Navigation.Destination.Login,
+                    )
                 }
                 is GlobalViewModel.LoginState.LoggedIn -> gvm.loadActiveOrder()
                 else -> gvm.logout()

@@ -64,6 +64,9 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         IntOffset((shakeAnimation.value * shakeAmplitude).roundToPx(), 0)
     }
 
+    private val _missingLocationPermissions = MutableStateFlow(false)
+    val missingLocationPermissions = _missingLocationPermissions.asStateFlow()
+
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(app)
 
     fun <T> savePreference(key: Preferences.Key<T>, value: T) {
@@ -263,6 +266,14 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
                     /* accuracyRadiusMeters = */ location.accuracy
                 )
             }
+    }
+
+    fun notifyMissingLocationPermissions() {
+        _missingLocationPermissions.value = true
+    }
+
+    fun consumeMissingLocationPermissions() {
+        _missingLocationPermissions.value = false
     }
 
     class Factory(

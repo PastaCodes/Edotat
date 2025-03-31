@@ -58,6 +58,7 @@ object Authentication {
         }
         val response = api.authenticateWithToken(token, refreshToken = doRefresh) ?: return null
         saveToken(response, gvm) // Save it even if we didn't ask for it
+        gvm.savePreference(UserPreferences.Keys.NeverLoggedIn, false)
         return response.account to response.connection!!
     }
 
@@ -71,6 +72,7 @@ object Authentication {
         if (requestToken) {
             saveToken(response, gvm)
         }
+        gvm.savePreference(UserPreferences.Keys.NeverLoggedIn, false)
         return response.account to response.connection!!
     }
 

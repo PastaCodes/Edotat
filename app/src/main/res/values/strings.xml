@@ -41,4 +41,7 @@
     <string name="find_table_enter_code_button">Continue</string>
     <string name="qr_code_invalid">We couldn\'t read this QR code :(</string>
     <string name="restaurants_near_me_no_results">We couldn\'t find any restaurants in this area :/</string>
+    <string name="restaurants_near_me_distance">%1$d - %2$d meters away</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="permissions_location_missing">Missing permissions for your location</string>
 </resources>
