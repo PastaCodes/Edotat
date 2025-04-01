@@ -29,6 +29,7 @@ import at.e.api.Order
 import at.e.api.Restaurant
 import at.e.api.Table
 import at.e.api.api
+import at.e.lib.Direction
 import at.e.lib.LoadingState
 import at.e.ui.home.FindTable
 import com.google.android.gms.location.CurrentLocationRequest
@@ -61,6 +62,11 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
     private val _currentTab = MutableStateFlow<Navigation.Destination?>(null)
     val currentTab = _currentTab.asStateFlow()
 
+    private var switchingTab = false
+
+    private val _forcedTransitionDirection = MutableStateFlow<Direction.Horizontal?>(null)
+    val forcedTransitionDirection = _forcedTransitionDirection.asStateFlow()
+
     private val snackbarHostState = SnackbarHostState()
 
     private val shakeAnimation = Animatable(0f)
@@ -76,8 +82,30 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
 
     init {
         nc.addOnDestinationChangedListener { _, destination, _ ->
-            _currentTab.value = Navigation.getTab(destination)
+            if (!switchingTab) {
+                val oldTab = _currentTab.value
+                val newTab = Navigation.getTab(destination)
+                _forcedTransitionDirection.value =
+                    Navigation.getTabSwitchDirection(oldTab, newTab)?.inverse
+                _currentTab.value = newTab
+            }
         }
+    }
+
+    fun switchTab(tab: Navigation.Destination) {
+        val oldTab = _currentTab.value
+        _forcedTransitionDirection.value = Navigation.getTabSwitchDirection(oldTab, tab)?.inverse
+        switchingTab = true
+        Navigation.switchTab(tab, nc)
+        _currentTab.value = tab
+    }
+
+    fun notifySwitchingTab() {
+        switchingTab = true
+    }
+
+    fun notifyFinishedSwitchingTab() {
+        switchingTab = false
     }
 
     fun <T> savePreference(key: Preferences.Key<T>, value: T) {
@@ -153,6 +181,11 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         class TableCodeNotFound(restaurant: Restaurant) : SelectedRestaurant(restaurant)
         class SelectedTable(val table: Table, restaurant: Restaurant) : SelectedRestaurant(restaurant)
         data class Active(val order: Order) : OrderState
+    }
+
+    fun resetOrder() {
+        assert(_orderState.value !is OrderState.Active)
+        _orderState.value = OrderState.None
     }
 
     fun consumeTableError() {

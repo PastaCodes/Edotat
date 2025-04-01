@@ -100,7 +100,7 @@ object Common {
                     selected = selected,
                     onClick = {
                         if (!selected) {
-                            Navigation.switchTab(button.route, gvm.nc)
+                            gvm.switchTab(button.route)
                         }
                     },
                     icon = {

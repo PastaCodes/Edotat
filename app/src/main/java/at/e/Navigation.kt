@@ -10,6 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
+import at.e.lib.Direction
 import at.e.ui.Transitions.slidingComposable
 import at.e.ui.home.FindTable
 import at.e.ui.home.Redirect
@@ -94,25 +95,35 @@ object Navigation {
                 composable<Destination.Home.Redirect> {
                     Redirect(gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.ChooseMethod> {
+                slidingComposable<Destination.Home.FindTable.ChooseMethod>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) {
                     gvm.bottomBar(true)
                     FindTable.ChooseMethod.Screen(innerPadding, gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.Method.QrCode> {
+                slidingComposable<Destination.Home.FindTable.Method.QrCode>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) {
                     gvm.bottomBar(true)
                     FindTable.Method.QrCode.Screen(innerPadding, gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.Method.NearMe> { backStackEntry ->
+                slidingComposable<Destination.Home.FindTable.Method.NearMe>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) { backStackEntry ->
                     gvm.bottomBar(true)
                     val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.NearMe>()
                     FindTable.Method.NearMe.Screen(innerPadding, route.isInitial, gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.Method.Search> { backStackEntry ->
+                slidingComposable<Destination.Home.FindTable.Method.Search>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) { backStackEntry ->
                     gvm.bottomBar(true)
                     val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.Search>()
                     FindTable.Method.Search.Screen(innerPadding, route.isInitial, gvm)
                 }
-                slidingComposable<Destination.Home.FindTable.EnterCode> {
+                slidingComposable<Destination.Home.FindTable.EnterCode>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) {
                     gvm.bottomBar(true)
                     FindTable.EnterCode.Screen(innerPadding, gvm)
                 }
@@ -125,11 +136,34 @@ object Navigation {
             navigation<Destination.AccountAndSettings>(
                 startDestination = Destination.AccountAndSettings.Main,
             ) {
-                composable<Destination.AccountAndSettings.Main> {
+                slidingComposable<Destination.AccountAndSettings.Main>(
+                    forcedDirection = gvm.forcedTransitionDirection
+                ) {
                     gvm.bottomBar(true)
                     AccountAndSettings.Screen(innerPadding, gvm)
                 }
             }
+        }
+    }
+
+    private fun getTabIndex(tab: Destination) =
+        when (tab) {
+            Destination.Home -> 0
+            Destination.RecentOrders -> 1
+            Destination.AccountAndSettings -> 2
+            else -> throw IllegalArgumentException()
+        }
+
+    fun getTabSwitchDirection(from: Destination?, to: Destination?): Direction.Horizontal? {
+        if (from == null || to == null) {
+            return null
+        }
+        val fromIndex = getTabIndex(from)
+        val toIndex = getTabIndex(to)
+        return when {
+            toIndex < fromIndex -> Direction.RightToLeft
+            toIndex > fromIndex -> Direction.LeftToRight
+            else -> null
         }
     }
 

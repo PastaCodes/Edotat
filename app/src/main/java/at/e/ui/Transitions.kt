@@ -10,21 +10,39 @@ import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import at.e.Navigation
+import at.e.lib.Direction
+import kotlinx.coroutines.flow.StateFlow
 
 object Transitions {
-    val InForward = slideInHorizontally { it } + fadeIn()
-    val OutForward = slideOutHorizontally { -it } + fadeOut()
-    val InBackward = slideInHorizontally { -it } + fadeIn()
-    val OutBackward = slideOutHorizontally { it } + fadeOut()
+    val EnterRightToLeft = slideInHorizontally { it } + fadeIn()
+    val ExitRightToLeft = slideOutHorizontally { -it } + fadeOut()
+    val EnterLeftToRight = slideInHorizontally { -it } + fadeIn()
+    val ExitLeftToRight = slideOutHorizontally { it } + fadeOut()
 
     inline fun <reified T : Navigation.Destination> NavGraphBuilder.slidingComposable(
+        forcedDirection: StateFlow<Direction.Horizontal?>,
         noinline content: @Composable (AnimatedContentScope.(NavBackStackEntry) -> Unit)
     ) {
         composable<T>(
-            enterTransition = { InForward },
-            exitTransition = { OutForward },
-            popEnterTransition = { InBackward },
-            popExitTransition = { OutBackward },
+            enterTransition = {
+                when (forcedDirection.value) {
+                    null, Direction.RightToLeft -> EnterRightToLeft
+                    Direction.LeftToRight -> EnterLeftToRight
+                }
+            },
+            exitTransition = {
+                when (forcedDirection.value) {
+                    null, Direction.RightToLeft -> ExitRightToLeft
+                    Direction.LeftToRight -> ExitLeftToRight
+                }
+            },
+            popEnterTransition = {
+                when (forcedDirection.value) {
+                    null, Direction.LeftToRight -> EnterLeftToRight
+                    Direction.RightToLeft -> EnterRightToLeft
+                }
+            },
+            popExitTransition = { ExitLeftToRight },
             content = content,
         )
     }

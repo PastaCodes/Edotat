@@ -13,6 +13,8 @@ import at.e.GlobalViewModel
 object AccountAndSettings {
     @Composable
     fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+        gvm.notifyFinishedSwitchingTab()
+
         Column(
             modifier = Modifier
                 .fillMaxSize()

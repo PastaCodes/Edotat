@@ -13,16 +13,19 @@ fun Redirect(gvm: GlobalViewModel) {
     val ftmpState by gvm.findTableMethodPreference.collectAsState()
 
     LaunchedEffect(orderState, ftmpState) {
+        gvm.notifySwitchingTab()
         if (orderState is GlobalViewModel.OrderState.Active) {
             gvm.nc.popBackStack() // Forget redirect
             gvm.nc.navigate(route = TODO())
-        } else if (orderState is GlobalViewModel.OrderState.None) {
+        } else {
+            gvm.resetOrder()
             val findTableMethodPreference = FindTable.Method.fromPreference(ftmpState.forceData)
             gvm.nc.popBackStack() // Forget redirect
             gvm.nc.navigate(route = Navigation.Destination.Home.FindTable.ChooseMethod)
             if (findTableMethodPreference != null) {
                 gvm.nc.navigate(route = findTableMethodPreference.route(/* isInitial = */ true))
             }
+            gvm.notifyFinishedSwitchingTab()
         }
     }
 }

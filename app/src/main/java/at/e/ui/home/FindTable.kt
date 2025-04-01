@@ -469,11 +469,11 @@ object FindTable {
                                     )
                                     Text(
                                         text =
-                                            gvm.app.getString(R.string.restaurants_near_me_distance)
-                                                .format(
-                                                    distanceMetersRange.first,
-                                                    distanceMetersRange.last,
-                                                ),
+                                            gvm.app.getString(
+                                                R.string.restaurants_near_me_distance,
+                                                distanceMetersRange.first,
+                                                distanceMetersRange.last,
+                                            ),
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                     )
