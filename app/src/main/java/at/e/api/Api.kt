@@ -8,7 +8,11 @@ val api: Api =
 
 interface Api {
     interface Connection {
+        suspend fun requestToken(): AuthResult
+
         suspend fun getActiveOrder(): Order?
+
+        suspend fun deleteAccountAndClose()
 
         suspend fun close()
     }

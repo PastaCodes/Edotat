@@ -1,8 +1,10 @@
 package at.e
 
-import android.annotation.SuppressLint
+import android.Manifest.permission
 import android.app.Application
+import androidx.annotation.RequiresPermission
 import androidx.annotation.StringRes
+import androidx.biometric.BiometricManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.repeatable
@@ -17,6 +19,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.times
 import androidx.datastore.preferences.core.Preferences
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -44,7 +47,9 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
 
-class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel() {
+class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
+    val biometricManager = BiometricManager.from(app)
+
     val userPreferences = UserPreferences(app.dataStore)
 
     private val _loginState = MutableStateFlow<LoginState>(LoginState.Loading)
@@ -92,7 +97,7 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         }
     }
 
-    fun switchTab(tab: Navigation.Destination) {
+    fun switchTab(tab: Navigation.Destination, nc: NavController) {
         val oldTab = _currentTab.value
         _forcedTransitionDirection.value = Navigation.getTabSwitchDirection(oldTab, tab)?.inverse
         switchingTab = true
@@ -114,9 +119,20 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         }
     }
 
+    fun <T> deletePreference(key: Preferences.Key<T>) {
+        viewModelScope.launch {
+            userPreferences.delete(key)
+        }
+    }
+
     fun savePreferredMethod(method: FindTable.Method) {
         _findTableMethodPreference.value = LoadingState.Data(method.toPreference())
         savePreference(UserPreferences.Keys.FindTablePreferredMethod, method.toPreference())
+    }
+
+    fun deletePreferredMethod() {
+        _findTableMethodPreference.value = LoadingState.Data(FindTable.Method.NO_PREFERENCE)
+        deletePreference(UserPreferences.Keys.FindTablePreferredMethod)
     }
 
     fun bottomBar(active: Boolean) {
@@ -133,10 +149,10 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         data class Registered(val account: Account) : LoginState
     }
 
-    fun tryAutoLogin() {
+    fun tryAutoLogin(activity: FragmentActivity, crs: CoroutineScope) {
         _loginState.value = LoginState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            when (val result = Authentication.autoLogin(this@GlobalViewModel)) {
+            when (val result = Authentication.autoLogin(activity, crs, this@GlobalViewModel)) {
                 null -> _loginState.value = LoginState.AutoLoginFailed
                 else -> _loginState.value =
                     LoginState.LoggedIn(account = result.first, connection = result.second)
@@ -158,6 +174,13 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
     fun logout() {
         viewModelScope.launch(Dispatchers.IO) {
             Authentication.logout(this@GlobalViewModel)
+            _loginState.value = LoginState.LoggedOut
+        }
+    }
+
+    fun logoutAndDeleteAccount() {
+        viewModelScope.launch(Dispatchers.IO) {
+            Authentication.logoutAndDeleteAccount(this@GlobalViewModel)
             _loginState.value = LoginState.LoggedOut
         }
     }
@@ -299,7 +322,10 @@ class GlobalViewModel(val app: Application, val nc: NavController) : ViewModel()
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(anyOf = [
+        permission.ACCESS_COARSE_LOCATION,
+        permission.ACCESS_FINE_LOCATION,
+    ])
     fun getUserLocation(action: (Location, Float) -> Unit) {
         val request = CurrentLocationRequest.Builder()
             .setMaxUpdateAgeMillis(20.seconds.inWholeMilliseconds)

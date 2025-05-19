@@ -36,6 +36,7 @@ android {
         jvmTarget = "11"
         freeCompilerArgs += listOf(
             "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
+            "-opt-in=kotlin.io.encoding.ExperimentalEncodingApi",
             "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
             "-opt-in=kotlin.uuid.ExperimentalUuidApi",
         )
@@ -58,6 +59,7 @@ dependencies {
     implementation(libs.androidx.navigation)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.preferences)
+    implementation(libs.androidx.biometric)
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization)
     implementation(libs.android.material)

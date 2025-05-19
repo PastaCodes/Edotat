@@ -3,7 +3,6 @@ package at.e.api.faux
 import at.e.api.Account
 import at.e.api.Api
 import at.e.api.Location
-import at.e.api.Order
 import at.e.api.Restaurant
 import at.e.api.faux.lib.ObjectFuzzySearch
 import kotlinx.coroutines.delay
@@ -96,11 +95,30 @@ object FauxApi : Api {
 
     private fun createConnection(account: Account) =
         object : Api.Connection {
-            override suspend fun getActiveOrder(): Order? = delayed {
+            override suspend fun requestToken() = delayed {
+                assert(this in connections)
+                val (newToken, newTokenExpiration) = generateAndStoreTokenIf(true, account)
+                Api.AuthResult(account, newToken, newTokenExpiration, this)
+            }
+
+            override suspend fun getActiveOrder() = delayed {
+                assert(this in connections)
                 null // TODO
             }
 
+            override suspend fun deleteAccountAndClose() {
+                assert(this in connections)
+                accounts.entries.removeAll { (_, entry) ->
+                    entry.info.email == account.email
+                }
+                tokens.entries.removeAll { (_, entry) ->
+                    entry.info.email == account.email
+                }
+                connections.remove(this)
+            }
+
             override suspend fun close() {
+                assert(this in connections)
                 connections.remove(this)
             }
         }

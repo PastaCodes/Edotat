@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -22,7 +23,7 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
         val NeverLoggedIn = booleanPreferencesKey("never_logged_in")
         val AuthToken = stringPreferencesKey("auth_token")
         val AuthTokenExpiration = longPreferencesKey("auth_token_expiration")
-        val AuthTokenEmail = stringPreferencesKey("auth_token_email")
+        val AuthTokenIv = byteArrayPreferencesKey("auth_token_iv")
         val AutoLogin = booleanPreferencesKey("auto_login")
         val AutoLoginRequireBiometrics = booleanPreferencesKey("auto_login_require_biometrics")
         val FindTablePreferredMethod = intPreferencesKey("find_table_preferred_method")
@@ -37,8 +38,8 @@ class UserPreferences(private val dataStore: DataStore<Preferences>) {
     val authTokenExpiration =
         dataStore.data.map { it[Keys.AuthTokenExpiration] }
 
-    val authTokenEmail =
-        dataStore.data.map { it[Keys.AuthTokenEmail] }
+    val authTokenIv =
+        dataStore.data.map { it[Keys.AuthTokenIv] }
 
     val autoLogin =
         dataStore.data.map { it[Keys.AutoLogin] ?: false }

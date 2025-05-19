@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.R
@@ -100,7 +101,11 @@ import kotlin.uuid.Uuid
 object FindTable {
     object ChooseMethod {
         @Composable
-        fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+        fun Screen(
+            innerPadding: PaddingValues,
+            gvm: GlobalViewModel,
+            nc: NavController,
+        ) {
             val orderState by gvm.orderState.collectAsState()
             val missingLocationPermissions by gvm.missingLocationPermissions.collectAsState()
 
@@ -153,7 +158,7 @@ object FindTable {
             ) {
                 Header(large = true, gvm)
                 Spacer(Modifier.height(16.dp))
-                MethodButtons(checkedState, gvm)
+                MethodButtons(checkedState, gvm, nc)
                 Spacer(Modifier.height(32.dp))
                 SetPreferredMethod(checkedState, setCheckedState, gvm)
             }
@@ -172,7 +177,11 @@ object FindTable {
         )
 
         @Composable
-        private fun MethodButtons(checkedState: Boolean, gvm: GlobalViewModel) {
+        private fun MethodButtons(
+            checkedState: Boolean,
+            gvm: GlobalViewModel,
+            nc: NavController,
+        ) {
             Column(
                 modifier = Modifier.width(300.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -183,7 +192,7 @@ object FindTable {
                             if (checkedState) {
                                 gvm.savePreferredMethod(button.method)
                             }
-                            gvm.nc.navigate(
+                            nc.navigate(
                                 route = button.method.route(/* isInitial: */ false),
                             )
                         },
@@ -270,12 +279,6 @@ object FindTable {
                     3 -> Search
                     else -> null
                 }
-
-            fun Method?.toRoute(isInitial: Boolean = false) =
-                when (this) {
-                    null -> Navigation.Destination.Home.FindTable.ChooseMethod
-                    else -> this.route(isInitial)
-                }
         }
 
         fun toPreference() =
@@ -287,7 +290,11 @@ object FindTable {
 
         data object QrCode : Method(Navigation.Destination.Home.FindTable.Method::QrCode) {
             @Composable
-            fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+            fun Screen(
+                innerPadding: PaddingValues,
+                gvm: GlobalViewModel,
+                nc: NavController,
+            ) {
                 val orderState by gvm.orderState.collectAsState()
 
                 LaunchedEffect(Unit) {
@@ -303,23 +310,23 @@ object FindTable {
                                 gvm.findTable(uuid)
                             } catch (_: Exception) {
                                 gvm.notifyInvalidQrCode()
-                                gvm.nc.navigateUp()
+                                nc.navigateUp()
                             }
                         }
                         .addOnCanceledListener {
-                            gvm.nc.navigateUp()
+                            nc.navigateUp()
                         }
                         .addOnFailureListener {
                             gvm.notifyInvalidQrCode()
-                            gvm.nc.navigateUp()
+                            nc.navigateUp()
                         }
                 }
 
                 LaunchedEffect(orderState) {
                     when (orderState) {
-                        is GlobalViewModel.OrderState.TableNotFound -> gvm.nc.navigateUp()
+                        is GlobalViewModel.OrderState.TableNotFound -> nc.navigateUp()
                         is GlobalViewModel.OrderState.SelectedTable -> {
-                            gvm.nc.navigate(route = TODO())
+                            nc.navigate(route = TODO())
                         }
                         else -> { }
                     }
@@ -343,6 +350,7 @@ object FindTable {
                 innerPadding: PaddingValues,
                 isInitial: Boolean,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 val vm = viewModel<RestaurantsNearMeViewModel>()
 
@@ -354,13 +362,13 @@ object FindTable {
                         .consumeWindowInsets(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Common.Back(textResId = R.string.find_table_method_back, gvm)
+                    Common.Back(textResId = R.string.find_table_method_back, gvm, nc)
                     if (isInitial) {
                         Spacer(Modifier.height(32.dp))
                         Header(large = false, gvm)
                         Spacer(Modifier.height(16.dp))
                     }
-                    RestaurantResults(this@Column, vm, gvm)
+                    RestaurantResults(this@Column, vm, gvm, nc)
                 }
             }
 
@@ -369,6 +377,7 @@ object FindTable {
                 columnScope: ColumnScope,
                 vm: RestaurantsNearMeViewModel,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -378,7 +387,7 @@ object FindTable {
                         vm.fetchNearby(gvm)
                     } else {
                         gvm.notifyMissingLocationPermissions()
-                        gvm.nc.navigateUp()
+                        nc.navigateUp()
                     }
                 }
 
@@ -410,7 +419,7 @@ object FindTable {
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             } else {
-                                RestaurantList(r.data, accuracyRadiusMeters.forceData, gvm)
+                                RestaurantList(r.data, accuracyRadiusMeters.forceData, gvm, nc)
                             }
                         }
                     }
@@ -425,6 +434,7 @@ object FindTable {
                 restaurants: List<Pair<Restaurant, Float>>,
                 accuracyRadiusMeters: Float,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -440,7 +450,7 @@ object FindTable {
                         OutlinedCard(
                             onClick = {
                                 gvm.selectRestaurant(restaurant)
-                                gvm.nc.navigate(
+                                nc.navigate(
                                     route = Navigation.Destination.Home.FindTable.EnterCode,
                                 )
                             },
@@ -515,11 +525,12 @@ object FindTable {
                 innerPadding: PaddingValues,
                 isInitial: Boolean,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 val vm = viewModel<RestaurantsViewModel>()
 
-                val isBack = gvm.nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
-                gvm.nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
+                val isBack = nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
+                nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
 
                 Column(
                     modifier = Modifier
@@ -529,7 +540,7 @@ object FindTable {
                         .consumeWindowInsets(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Common.Back(textResId = R.string.find_table_method_back, gvm)
+                    Common.Back(textResId = R.string.find_table_method_back, gvm, nc)
                     if (isInitial) {
                         val lift = WindowInsets.ime.getBottom(LocalDensity.current) / 800f
 
@@ -538,7 +549,7 @@ object FindTable {
                         Spacer(Modifier.height(16.dp - (12 * lift).dp))
                     }
                     SearchBar(isInitial, isBack, vm, gvm)
-                    RestaurantResults(this@Column, vm, gvm)
+                    RestaurantResults(this@Column, vm, gvm, nc)
                 }
             }
 
@@ -602,6 +613,7 @@ object FindTable {
                 columnScope: ColumnScope,
                 vm: RestaurantsViewModel,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 val restaurants by vm.restaurants.collectAsState()
 
@@ -621,7 +633,7 @@ object FindTable {
                                     fontWeight = FontWeight.SemiBold,
                                 )
                             } else {
-                                RestaurantList(r.data, gvm)
+                                RestaurantList(r.data, gvm, nc)
                             }
                         }
                     }
@@ -632,6 +644,7 @@ object FindTable {
             private fun RestaurantList(
                 restaurants: List<Restaurant>,
                 gvm: GlobalViewModel,
+                nc: NavController,
             ) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -642,7 +655,7 @@ object FindTable {
                         OutlinedCard(
                             onClick = {
                                 gvm.selectRestaurant(restaurant)
-                                gvm.nc.navigate(
+                                nc.navigate(
                                     route = Navigation.Destination.Home.FindTable.EnterCode,
                                 )
                             },
@@ -720,11 +733,12 @@ object FindTable {
         fun Screen(
             innerPadding: PaddingValues,
             gvm: GlobalViewModel,
+            nc: NavController,
         ) {
             val crs = rememberCoroutineScope()
 
-            val isBack = gvm.nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
-            gvm.nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
+            val isBack = nc.currentBackStackEntry!!.savedStateHandle.contains("isBack")
+            nc.currentBackStackEntry!!.savedStateHandle["isBack"] = true
 
             val orderState by gvm.orderState.collectAsState()
             val selectedRestaurant = rememberSaveable {
@@ -740,7 +754,7 @@ object FindTable {
             LaunchedEffect(orderState) {
                 when (orderState) {
                     is GlobalViewModel.OrderState.SelectedTable -> {
-                        gvm.nc.navigate(route = TODO())
+                        nc.navigate(route = TODO())
                     }
                     is GlobalViewModel.OrderState.TableCodeNotFound -> {
                         isNotFoundError = true
@@ -869,7 +883,7 @@ object FindTable {
                     .padding(24.dp)
                     .consumeWindowInsets(innerPadding),
             ) {
-                Common.Back(textResId = R.string.find_table_enter_code_back, gvm)
+                Common.Back(textResId = R.string.find_table_enter_code_back, gvm, nc)
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth().weight(1f).padding(12.dp, 24.dp),
                 ) {

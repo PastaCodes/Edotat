@@ -10,8 +10,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.fragment.app.FragmentActivity
+import androidx.navigation.NavController
+import at.e.Authentication
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.lib.LoadingState
@@ -19,7 +23,14 @@ import kotlinx.coroutines.flow.first
 
 object Loading {
     @Composable
-    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+    fun Screen(
+        innerPadding: PaddingValues,
+        activity: FragmentActivity,
+        gvm: GlobalViewModel,
+        nc: NavController,
+    ) {
+        val crs = rememberCoroutineScope()
+
         val loginState by gvm.loginState.collectAsState()
         val orderState by gvm.orderState.collectAsState()
         val ftmpState by gvm.findTableMethodPreference.collectAsState()
@@ -29,11 +40,11 @@ object Loading {
         }
         LaunchedEffect(loginState) {
             when (loginState) {
-                is GlobalViewModel.LoginState.Loading -> gvm.tryAutoLogin()
+                is GlobalViewModel.LoginState.Loading -> gvm.tryAutoLogin(activity, crs)
                 is GlobalViewModel.LoginState.AutoLoginFailed -> {
                     val neverLoggedIn = gvm.userPreferences.neverLoggedIn.first()
-                    gvm.nc.popBackStack() // Forget loading screen
-                    gvm.nc.navigate(
+                    nc.popBackStack() // Forget loading screen
+                    nc.navigate(
                         route =
                             if (neverLoggedIn)
                                 Navigation.Destination.Register
@@ -50,8 +61,8 @@ object Loading {
                 orderState is GlobalViewModel.OrderState.Active
             ||  (orderState is GlobalViewModel.OrderState.None && ftmpState is LoadingState.Data)
             ) {
-                gvm.nc.popBackStack() // Forget loading screen
-                gvm.nc.navigate(route = Navigation.Destination.Home)
+                nc.popBackStack() // Forget loading screen
+                nc.navigate(route = Navigation.Destination.Home)
             }
         }
 

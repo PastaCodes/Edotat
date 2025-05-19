@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.Navigation.ClearBackStack
@@ -61,7 +62,7 @@ import at.e.ui.theme.EdotatTheme.mediumAlpha
 
 object Register {
     @Composable
-    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel) {
+    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
         val crs = rememberCoroutineScope()
 
         val loginState by gvm.loginState.collectAsState()
@@ -84,7 +85,7 @@ object Register {
                         actionResId = R.string.action_ok,
                         withDismissAction = false,
                         action = {
-                            gvm.nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
+                            nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
                         }
                     )
                 }
@@ -284,7 +285,7 @@ object Register {
                 HorizontalDivider()
                 TextButton(
                     onClick = {
-                        gvm.nc.navigate(route = Navigation.Destination.Login)
+                        nc.navigate(route = Navigation.Destination.Login)
                     },
                     shape = EdotatTheme.RoundedCornerShape,
                 ) {

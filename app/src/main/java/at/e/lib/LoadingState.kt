@@ -31,4 +31,10 @@ sealed interface LoadingState<out T> {
 
     val forceData
         get() = (this as Data).data
+
+    fun <R> mapData(transform: (T) -> R) =
+        when (this) {
+            is Loading -> null
+            is Data -> transform(this.data)
+        }
 }

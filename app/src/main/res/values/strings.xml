@@ -44,4 +44,20 @@
     <string name="restaurants_near_me_distance">%1$d - %2$d meters away</string>
     <string name="action_open_settings">Open settings</string>
     <string name="permissions_location_missing">Missing permissions for your location</string>
+    <string name="settings_your_account">Your account</string>
+    <string name="settings_change_password">Change password</string>
+    <string name="settings_delete_account">Delete account</string>
+    <string name="logout">Log out</string>
+    <string name="not_implemented">This functionality is currently not implemented</string>
+    <string name="settings_local">Local settings</string>
+    <string name="back_home">Back to home</string>
+    <string name="settings_autologin_never">Never</string>
+    <string name="settings_autologin_always">Always</string>
+    <string name="settings_autologin_require_biometrics">Always, with biometric authentication</string>
+    <string name="settings_find_table_always_ask">Always ask</string>
+    <string name="settings_find_table_qr_code">Scan the table\'s QR code</string>
+    <string name="settings_find_table_near_me">Search nearby restaurants</string>
+    <string name="settings_find_table_search">Search restaurant by name</string>
+    <string name="settings_autologin_label">Log in automatically:</string>
+    <string name="settings_find_table_method_preference_label">Preferred method to find your table:</string>
 </resources>
