@@ -19,7 +19,7 @@
     <string name="login_welcome_back">Welcome\nback!</string>
     <string name="login_email_label">Email address</string>
     <string name="login_password_label">Password</string>
-    <string name="login_button">Login</string>
+    <string name="login_button">Log in</string>
     <string name="login_forgot_password">I forgot my password</string>
     <string name="login_go_to_register">I don\'t have an account</string>
     <string name="login_failed_credentials">Login failed :( Check your credentials!</string>
@@ -67,4 +67,5 @@
     <string name="biometric_prompt_title">Verify your identity</string>
     <string name="biometric_prompt_subtitle_encrypt">Encrypt access token</string>
     <string name="biometric_prompt_subtitle_decrypt">Decrypt access token</string>
+    <string name="choose_menu_title">Choose a menu</string>
 </resources>

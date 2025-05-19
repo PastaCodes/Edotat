@@ -3,11 +3,14 @@ package at.e.api.faux
 import at.e.api.Account
 import at.e.api.Api
 import at.e.api.Location
+import at.e.api.Menu
 import at.e.api.Restaurant
 import at.e.api.faux.lib.ObjectFuzzySearch
+import at.e.lib.minuteOfDay
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock.System.now
 import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalTime
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -31,13 +34,8 @@ object FauxApi : Api {
             .associateBy { it.uuid }
     private val TABLES_BY_UUID =
         TABLES
-            .flatMap { (restaurantUuid, tables) ->
-                tables.entries.associateWith { restaurantUuid }.entries
-            }
-            .associate { (tableEntry, restaurantUuid) ->
-                val (tableUuid, table) = tableEntry
-                tableUuid to (table to RESTAURANTS_BY_UUID[restaurantUuid]!!)
-            }
+            .flatMap { it.value.entries }
+            .associate { it.key to it.value }
     private val TABLES_BY_CODE =
         TABLES
             .mapValues { (_, tables) ->
@@ -204,6 +202,15 @@ object FauxApi : Api {
                 query, RESTAURANTS, TO_STRINGS, WEIGHTS, CUTOFF, maxCount
             )
         }
+    }
+
+    override suspend fun getMenus(restaurant: Restaurant) = delayed {
+        listOf(
+            Menu("Breakfast menu", minuteOfDay(8, 0), minuteOfDay(10, 0), restaurant),
+            Menu("Lunch menu", minuteOfDay(12, 0), minuteOfDay(14, 0), restaurant),
+            Menu("Dinner menu", minuteOfDay(19, 0), minuteOfDay(21, 0), restaurant),
+            Menu("Dummy menu", minuteOfDay(0, 0), minuteOfDay(24, 0), restaurant),
+        )
     }
 
     override suspend fun findTable(code: String, restaurant: Restaurant) = delayed {

@@ -37,7 +37,7 @@ interface Api {
 
     suspend fun register(email: String, password: String, requestToken: Boolean): AuthResult?
 
-    suspend fun findTable(uuid: Uuid): Pair<Table, Restaurant>?
+    suspend fun findTable(uuid: Uuid): Table?
 
     suspend fun getRestaurants(
         userLocation: Location,
@@ -51,4 +51,6 @@ interface Api {
     ): List<Restaurant>
 
     suspend fun findTable(code: String, restaurant: Restaurant): Table?
+
+    suspend fun getMenus(restaurant: Restaurant): List<Menu>
 }

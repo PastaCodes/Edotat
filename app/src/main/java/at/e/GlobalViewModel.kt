@@ -28,6 +28,7 @@ import at.e.UserPreferences.Companion.dataStore
 import at.e.api.Account
 import at.e.api.Api
 import at.e.api.Location
+import at.e.api.Menu
 import at.e.api.Order
 import at.e.api.Restaurant
 import at.e.api.Table
@@ -202,13 +203,23 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         data object TableNotFound : OrderState
         open class SelectedRestaurant(val restaurant: Restaurant) : OrderState
         class TableCodeNotFound(restaurant: Restaurant) : SelectedRestaurant(restaurant)
-        class SelectedTable(val table: Table, restaurant: Restaurant) : SelectedRestaurant(restaurant)
-        data class Active(val order: Order) : OrderState
+        open class SelectedTable(val table: Table) : SelectedRestaurant(table.restaurant)
+        open class SelectedMenu(val menu: Menu, table: Table) : SelectedTable(table)
+        data class Active(val order: Order) : SelectedMenu(order.menu, order.table)
     }
 
     fun resetOrder() {
         assert(_orderState.value !is OrderState.Active)
         _orderState.value = OrderState.None
+    }
+
+    fun orderStateBack() {
+        when (val os = _orderState.value) {
+            is OrderState.SelectedMenu -> _orderState.value = OrderState.SelectedTable(os.table)
+            is OrderState.SelectedTable -> _orderState.value = OrderState.SelectedRestaurant(os.restaurant)
+            is OrderState.SelectedRestaurant -> _orderState.value = OrderState.None
+            else -> { }
+        }
     }
 
     fun consumeTableError() {
@@ -219,9 +230,8 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         _orderState.value = OrderState.Loading
         viewModelScope.launch(Dispatchers.IO) {
             _orderState.value = when (val response = api.findTable(uuid)) {
-                is Pair<Table, Restaurant> -> {
-                    val (table, restaurant) = response
-                    OrderState.SelectedTable(table, restaurant)
+                is Table -> {
+                    OrderState.SelectedTable(response)
                 }
                 else -> OrderState.TableNotFound
             }
@@ -244,9 +254,18 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         _orderState.value = OrderState.Loading
         viewModelScope.launch(Dispatchers.IO) {
             _orderState.value = when (val table = api.findTable(code, restaurant)) {
-                is Table -> OrderState.SelectedTable(table, restaurant)
+                is Table -> OrderState.SelectedTable(table)
                 else -> OrderState.TableCodeNotFound(restaurant)
             }
+        }
+    }
+
+    fun selectMenu(menu: Menu) {
+        when (val os = _orderState.value) {
+            is OrderState.SelectedTable -> {
+                _orderState.value = OrderState.SelectedMenu(menu, os.table)
+            }
+            else -> throw IllegalStateException()
         }
     }
 

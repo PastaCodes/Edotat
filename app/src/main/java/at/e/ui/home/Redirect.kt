@@ -17,7 +17,7 @@ fun Redirect(gvm: GlobalViewModel, nc: NavController) {
         gvm.notifySwitchingTab()
         if (orderState is GlobalViewModel.OrderState.Active) {
             nc.popBackStack() // Forget redirect
-            nc.navigate(route = TODO())
+            nc.navigate(route = Navigation.Destination.Home.ChooseMenu)
         } else {
             gvm.resetOrder()
             val findTableMethodPreference = FindTable.Method.fromPreference(ftmpState.forceData)

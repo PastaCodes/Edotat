@@ -1,3 +1,3 @@
 package at.e.api
 
-class Order
+data class Order(val menu: Menu, val table: Table)

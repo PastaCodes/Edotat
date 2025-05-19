@@ -1,5 +1,6 @@
 package at.e
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.fragment.app.FragmentActivity
@@ -15,6 +16,7 @@ import at.e.lib.Direction
 import at.e.ui.Transitions.slidingComposable
 import at.e.ui.home.FindTable
 import at.e.ui.home.Redirect
+import at.e.ui.home.ChooseMenu
 import at.e.ui.loading.Loading
 import at.e.ui.login.Login
 import at.e.ui.login.Register
@@ -36,7 +38,6 @@ object Navigation {
 
         @Serializable
         data object Home : Destination {
-
             @Serializable
             data object Redirect : Destination
 
@@ -58,6 +59,9 @@ object Navigation {
                 @Serializable
                 data object EnterCode : Destination
             }
+
+            @Serializable
+            data object ChooseMenu : Destination
         }
 
         @Serializable
@@ -80,6 +84,14 @@ object Navigation {
         gvm: GlobalViewModel,
         innerPadding: PaddingValues,
     ) {
+        @Composable
+        fun OrderStateBackHandler() {
+            BackHandler {
+                nc.popBackStack()
+                gvm.orderStateBack()
+            }
+        }
+
         NavHost(
             navController = nc,
             startDestination = Destination.Loading,
@@ -130,7 +142,15 @@ object Navigation {
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
                     gvm.bottomBar(true)
+                    OrderStateBackHandler()
                     FindTable.EnterCode.Screen(innerPadding, gvm, nc)
+                }
+                slidingComposable<Destination.Home.ChooseMenu>(
+                    forcedDirection = gvm.forcedTransitionDirection,
+                ) {
+                    gvm.bottomBar(true)
+                    OrderStateBackHandler()
+                    ChooseMenu.Screen(innerPadding, gvm, nc)
                 }
             }
             navigation<Destination.RecentOrders>(

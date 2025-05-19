@@ -1,11 +1,13 @@
 package at.e.ui.home
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -326,7 +328,7 @@ object FindTable {
                     when (orderState) {
                         is GlobalViewModel.OrderState.TableNotFound -> nc.navigateUp()
                         is GlobalViewModel.OrderState.SelectedTable -> {
-                            nc.navigate(route = TODO())
+                            nc.navigate(route = Navigation.Destination.Home.ChooseMenu)
                         }
                         else -> { }
                     }
@@ -382,8 +384,11 @@ object FindTable {
                 val permissionLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.RequestMultiplePermissions()
                 ) { permissionsResult ->
-                    val anyGranted = permissionsResult.any { it.value }
-                    if (anyGranted) {
+                    @SuppressLint("MissingPermission") // We are literally checking the exact permissions
+                    if (
+                        permissionsResult[Manifest.permission.ACCESS_FINE_LOCATION] == true
+                    ||  permissionsResult[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+                    ) {
                         vm.fetchNearby(gvm)
                     } else {
                         gvm.notifyMissingLocationPermissions()
@@ -508,6 +513,7 @@ object FindTable {
                 private val _restaurants = LoadingState.flow<List<Pair<Restaurant, Float>>>()
                 val restaurants = _restaurants.asStateFlow()
 
+                @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
                 fun fetchNearby(gvm: GlobalViewModel) {
                     gvm.getUserLocation { userLocation, accuracyRadiusMeters ->
                         viewModelScope.launch(Dispatchers.IO) {
@@ -754,7 +760,8 @@ object FindTable {
             LaunchedEffect(orderState) {
                 when (orderState) {
                     is GlobalViewModel.OrderState.SelectedTable -> {
-                        nc.navigate(route = TODO())
+                        nc.popBackStack() // Forget about table code screen
+                        nc.navigate(route = Navigation.Destination.Home.ChooseMenu)
                     }
                     is GlobalViewModel.OrderState.TableCodeNotFound -> {
                         isNotFoundError = true
