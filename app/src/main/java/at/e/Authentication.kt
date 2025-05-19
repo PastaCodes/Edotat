@@ -3,6 +3,7 @@ package at.e
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.annotation.StringRes
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_STRONG
 import androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
 import androidx.biometric.BiometricPrompt
@@ -71,7 +72,7 @@ object Authentication {
         if (response.newToken != null) {
             var token = response.newToken
             if (gvm.userPreferences.autoLoginRequireBiometrics.first()) {
-                val (encrypted, iv) = biometricEncrypt(token, activity, crs, gvm) ?: return false
+                val (encrypted, iv) = biometricEncrypt(token, R.string.biometric_prompt_subtitle_encrypt, activity, crs, gvm) ?: return false
                 token = encrypted
                 gvm.savePreference(UserPreferences.Keys.AuthTokenIv, iv)
             }
@@ -112,7 +113,7 @@ object Authentication {
 
     private suspend fun biometricPrompt(
         lockedCipher: Cipher,
-        title: String,
+        @StringRes subtitleResId: Int,
         activity: FragmentActivity,
         crs: CoroutineScope,
         gvm: GlobalViewModel,
@@ -121,11 +122,10 @@ object Authentication {
             return null
         }
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle(title)
-            .setSubtitle("TMP1")
-            .setDescription("TMP2")
+            .setTitle(activity.getString(R.string.biometric_prompt_title))
+            .setSubtitle(activity.getString(subtitleResId))
+            .setNegativeButtonText(activity.getString(R.string.action_cancel))
             .setConfirmationRequired(false)
-            .setNegativeButtonText("TMP3")
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
             .build()
         return suspendCoroutine { continuation ->
@@ -156,6 +156,7 @@ object Authentication {
 
     private suspend fun biometricEncrypt(
         plainToken: String,
+        @StringRes promptTitleResId: Int,
         activity: FragmentActivity,
         crs: CoroutineScope,
         gvm: GlobalViewModel,
@@ -163,7 +164,7 @@ object Authentication {
         val lockedEncryptionCipher = getBiometricAuthEncryptionCipher()
         val iv = lockedEncryptionCipher.iv
         val unlockedEncryptionCipher =
-            biometricPrompt(lockedEncryptionCipher, "PIEDI", activity, crs, gvm) ?: return null
+            biometricPrompt(lockedEncryptionCipher, promptTitleResId, activity, crs, gvm) ?: return null
         val plainBytes = plainToken.toByteArray(Charsets.UTF_8)
         val encryptedBytes = unlockedEncryptionCipher.doFinal(plainBytes)
         val encrypted = Base64.encode(encryptedBytes)
@@ -173,12 +174,13 @@ object Authentication {
     private suspend fun biometricDecrypt(
         encryptedToken: String,
         iv: ByteArray,
+        @StringRes promptTitleResId: Int,
         activity: FragmentActivity,
         crs: CoroutineScope,
         gvm: GlobalViewModel,
     ): String? {
         val lockedDecryptionCipher = getBiometricAuthDecryptionCipher(iv)
-        val unlockedDecryptionCipher = biometricPrompt(lockedDecryptionCipher, "PIEDI", activity, crs, gvm)
+        val unlockedDecryptionCipher = biometricPrompt(lockedDecryptionCipher, promptTitleResId, activity, crs, gvm)
         val encryptedBytes = Base64.decode(encryptedToken)
         val decryptedBytes = unlockedDecryptionCipher?.doFinal(encryptedBytes) ?: return null
         val decrypted = String(decryptedBytes, Charsets.UTF_8)
@@ -207,7 +209,7 @@ object Authentication {
                 return null
             }
             val iv = gvm.userPreferences.authTokenIv.first() ?: return null
-            token = biometricDecrypt(token, iv, activity, crs, gvm) ?: return null
+            token = biometricDecrypt(token, iv, R.string.biometric_prompt_subtitle_decrypt, activity, crs, gvm) ?: return null
         }
         val response = api.authenticateWithToken(token, refreshToken = doRefresh) ?: return null
         if (!requireBiometrics || doRefresh) { // If we don't need to bother the user, save the token even if we didn't ask for it
@@ -272,7 +274,7 @@ object Authentication {
         gvm: GlobalViewModel,
     ): Boolean {
         val plain = gvm.userPreferences.authToken.first() ?: return false
-        val (encrypted, iv) = biometricEncrypt(plain, activity, crs, gvm) ?: return false
+        val (encrypted, iv) = biometricEncrypt(plain, R.string.biometric_prompt_subtitle_encrypt, activity, crs, gvm) ?: return false
         gvm.savePreference(UserPreferences.Keys.AuthToken, encrypted)
         gvm.savePreference(UserPreferences.Keys.AuthTokenIv, iv)
         return true
@@ -285,7 +287,7 @@ object Authentication {
     ): Boolean {
         val encrypted = gvm.userPreferences.authToken.first() ?: return false
         val iv = gvm.userPreferences.authTokenIv.first() ?: return false
-        val decrypted = biometricDecrypt(encrypted, iv, activity, crs, gvm) ?: return false
+        val decrypted = biometricDecrypt(encrypted, iv, R.string.biometric_prompt_subtitle_decrypt, activity, crs, gvm) ?: return false
         gvm.savePreference(UserPreferences.Keys.AuthToken, decrypted)
         return true
     }

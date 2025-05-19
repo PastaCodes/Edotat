@@ -64,4 +64,7 @@
     <string name="action_confirm">Confirm</string>
     <string name="settings_delete_account_dialog_title">Delete account?</string>
     <string name="settings_delete_account_dialog_text">Are you sure you would like to delete this account permanently? This action cannot be undone.</string>
+    <string name="biometric_prompt_title">Verify your identity</string>
+    <string name="biometric_prompt_subtitle_encrypt">Encrypt access token</string>
+    <string name="biometric_prompt_subtitle_decrypt">Decrypt access token</string>
 </resources>
