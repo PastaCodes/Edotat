@@ -90,11 +90,11 @@ object Navigation {
             }
             composable<Destination.Login> {
                 gvm.bottomBar(false)
-                Login.Screen(innerPadding, gvm, nc)
+                Login.Screen(innerPadding, activity, gvm, nc)
             }
             composable<Destination.Register> {
                 gvm.bottomBar(false)
-                Register.Screen(innerPadding, gvm, nc)
+                Register.Screen(innerPadding, activity, gvm, nc)
             }
             navigation<Destination.Home>(startDestination = Destination.Home.Redirect) {
                 composable<Destination.Home.Redirect> {

@@ -26,8 +26,6 @@ import kotlin.coroutines.suspendCoroutine
 import kotlin.io.encoding.Base64
 import kotlin.time.Duration.Companion.days
 
-// TODO be careful about overriding an encrypted token with a plain one!
-
 object Authentication {
     private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     private val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE)
@@ -64,11 +62,22 @@ object Authentication {
         }
     }
 
-    private suspend fun saveToken(response: Api.AuthResult, gvm: GlobalViewModel) {
+    private suspend fun saveToken(
+        response: Api.AuthResult,
+        activity: FragmentActivity,
+        crs: CoroutineScope,
+        gvm: GlobalViewModel,
+    ): Boolean {
         if (response.newToken != null) {
+            var token = response.newToken
+            if (gvm.userPreferences.autoLoginRequireBiometrics.first()) {
+                val (encrypted, iv) = biometricEncrypt(token, activity, crs, gvm) ?: return false
+                token = encrypted
+                gvm.savePreference(UserPreferences.Keys.AuthTokenIv, iv)
+            }
             gvm.userPreferences.save(
                 UserPreferences.Keys.AuthToken,
-                response.newToken
+                token
             )
             if (response.newTokenExpiration != null) {
                 gvm.userPreferences.save(
@@ -81,6 +90,7 @@ object Authentication {
         } else {
             deleteToken(gvm)
         }
+        return true
     }
 
     fun isBiometricAuthEnabled(gvm: GlobalViewModel) =
@@ -200,7 +210,9 @@ object Authentication {
             token = biometricDecrypt(token, iv, activity, crs, gvm) ?: return null
         }
         val response = api.authenticateWithToken(token, refreshToken = doRefresh) ?: return null
-        saveToken(response, gvm) // Save it even if we didn't ask for it
+        if (!requireBiometrics || doRefresh) { // If we don't need to bother the user, save the token even if we didn't ask for it
+            saveToken(response, activity, crs, gvm) || return null
+        }
         gvm.savePreference(UserPreferences.Keys.NeverLoggedIn, false)
         return response.account to response.connection!!
     }
@@ -208,13 +220,15 @@ object Authentication {
     suspend fun manualLogin(
         email: String,
         password: String,
+        activity: FragmentActivity,
+        crs: CoroutineScope,
         gvm: GlobalViewModel,
     ): Pair<Account, Api.Connection>? {
         deleteToken(gvm)
         val requestToken = gvm.userPreferences.autoLogin.first()
         val response = api.authenticate(email, password, requestToken) ?: return null
         if (requestToken) {
-            saveToken(response, gvm)
+            saveToken(response, activity, crs, gvm) || return null
         }
         gvm.savePreference(UserPreferences.Keys.NeverLoggedIn, false)
         return response.account to response.connection!!
@@ -242,9 +256,14 @@ object Authentication {
         gvm.userPreferences.delete(UserPreferences.Keys.AuthTokenIv)
     }
 
-    suspend fun requestToken(connection: Api.Connection, gvm: GlobalViewModel) {
+    suspend fun requestToken(
+        connection: Api.Connection,
+        activity: FragmentActivity,
+        crs: CoroutineScope,
+        gvm: GlobalViewModel,
+    ): Boolean {
         val response = connection.requestToken()
-        saveToken(response, gvm)
+        return saveToken(response, activity, crs, gvm)
     }
 
     suspend fun encryptToken(
@@ -274,13 +293,15 @@ object Authentication {
     suspend fun register(
         email: String,
         password: String,
+        activity: FragmentActivity,
+        crs: CoroutineScope,
         gvm: GlobalViewModel,
     ): Account? {
         deleteToken(gvm)
         val requestToken = gvm.userPreferences.autoLogin.first()
         val response = api.register(email, password, requestToken) ?: return null
         if (requestToken) {
-            saveToken(response, gvm)
+            saveToken(response, activity, crs, gvm) || return null
         }
         return response.account
     }

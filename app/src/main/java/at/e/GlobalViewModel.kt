@@ -160,10 +160,10 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         }
     }
 
-    fun tryManualLogin(email: String, password: String) {
+    fun tryManualLogin(email: String, password: String, activity: FragmentActivity, crs: CoroutineScope) {
         _loginState.value = LoginState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            when (val result = Authentication.manualLogin(email, password, this@GlobalViewModel)) {
+            when (val result = Authentication.manualLogin(email, password, activity, crs, this@GlobalViewModel)) {
                 null -> _loginState.value = LoginState.ManualLoginFailed
                 else -> _loginState.value =
                     LoginState.LoggedIn(account = result.first, connection = result.second)
@@ -185,10 +185,10 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         }
     }
 
-    fun tryRegister(email: String, password: String) {
+    fun tryRegister(email: String, password: String, activity: FragmentActivity, crs: CoroutineScope) {
         _loginState.value = LoginState.Loading
         viewModelScope.launch(Dispatchers.IO) {
-            when (val account = Authentication.register(email, password, this@GlobalViewModel)) {
+            when (val account = Authentication.register(email, password, activity, crs, this@GlobalViewModel)) {
                 is Account -> _loginState.value = LoginState.Registered(account)
                 null -> _loginState.value = LoginState.RegisterFailed
             }

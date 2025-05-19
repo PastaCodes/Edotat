@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.Navigation
@@ -62,7 +63,7 @@ import at.e.ui.theme.EdotatTheme.mediumAlpha
 
 object Register {
     @Composable
-    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
+    fun Screen(innerPadding: PaddingValues, activity: FragmentActivity, gvm: GlobalViewModel, nc: NavController) {
         val crs = rememberCoroutineScope()
 
         val loginState by gvm.loginState.collectAsState()
@@ -109,7 +110,7 @@ object Register {
                 isPasswordError = password.isBlank()
                 if (email.isNotBlank() && password.isNotBlank()) {
                     gvm.savePreference(UserPreferences.Keys.AutoLogin, stayLoggedIn)
-                    gvm.tryRegister(email, password)
+                    gvm.tryRegister(email, password, activity, crs)
                 } else {
                     gvm.shake(crs)
                 }

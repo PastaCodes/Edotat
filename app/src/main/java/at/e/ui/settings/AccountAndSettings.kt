@@ -80,7 +80,7 @@ object AccountAndSettings {
                 if (gvm.userPreferences.authToken.first() == null) {
                     Authentication.requestToken(
                         (gvm.loginState.value as GlobalViewModel.LoginState.LoggedIn).connection,
-                        gvm
+                        activity, crs, gvm
                     )
                     true
                 } else {
@@ -97,10 +97,11 @@ object AccountAndSettings {
                 if (gvm.userPreferences.authToken.first() == null) {
                     Authentication.requestToken(
                         (gvm.loginState.value as GlobalViewModel.LoginState.LoggedIn).connection,
-                        gvm
+                        activity, crs, gvm
                     )
+                } else {
+                    Authentication.encryptToken(activity, crs, gvm)
                 }
-                Authentication.encryptToken(activity, crs, gvm)
             },
         ),
         ;
