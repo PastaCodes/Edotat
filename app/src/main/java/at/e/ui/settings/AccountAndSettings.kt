@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.RadioButton
@@ -24,7 +25,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -162,6 +165,62 @@ object AccountAndSettings {
     )
 
     @Composable
+    fun DeleteAccountDialog(isOpen: Boolean, setOpen: (Boolean) -> Unit, gvm: GlobalViewModel, nc: NavController) {
+        if (isOpen) {
+            AlertDialog(
+                icon = {
+                    Icon(
+                        imageVector = EdotatIcons.DeleteAccount,
+                        contentDescription = null, // Icon is decorative
+                        modifier = Modifier.size(32.dp),
+                    )
+                },
+                title = {
+                    Text(
+                        text = gvm.app.getString(R.string.settings_delete_account_dialog_title),
+                        fontSize = 32.sp,
+                    )
+                },
+                text = {
+                    Text(
+                        text = gvm.app.getString(R.string.settings_delete_account_dialog_text),
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp,
+                    )
+                },
+                onDismissRequest = {
+                    setOpen(false)
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            gvm.logoutAndDeleteAccount()
+                            nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
+                        },
+                    ) {
+                        Text(
+                            text = gvm.app.getString(R.string.action_confirm),
+                            fontSize = 16.sp,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            setOpen(false)
+                        },
+                    ) {
+                        Text(
+                            text = gvm.app.getString(R.string.action_cancel),
+                            fontSize = 16.sp,
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    @Composable
     fun Screen(
         innerPadding: PaddingValues,
         activity: FragmentActivity,
@@ -181,6 +240,9 @@ object AccountAndSettings {
             vm.initSettings(gvm)
         }
 
+        val (deleteAccountDialogOpen, setDeleteAccountDialogOpen) = rememberSaveable { mutableStateOf(false) }
+        DeleteAccountDialog(deleteAccountDialogOpen, setDeleteAccountDialogOpen, gvm, nc)
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -190,7 +252,7 @@ object AccountAndSettings {
                 .verticalScroll(rememberScrollState())
         ) {
             Common.Back(textResId = R.string.back_home, gvm, nc)
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(64.dp))
             Text(
                 text = gvm.app.getString(R.string.settings_your_account),
                 fontSize = 32.sp,
@@ -248,8 +310,7 @@ object AccountAndSettings {
             }
             TextButton(
                 onClick = {
-                    gvm.logoutAndDeleteAccount()
-                    nc.navigate(route = Navigation.Destination.Login, ClearBackStack)
+                    setDeleteAccountDialogOpen(true)
                 },
                 shape = EdotatTheme.RoundedCornerShape,
             ) {
@@ -258,7 +319,7 @@ object AccountAndSettings {
                     fontSize = 16.sp,
                 )
             }
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(64.dp))
             Text(
                 text = gvm.app.getString(R.string.settings_local),
                 fontSize = 32.sp,

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.NoAccounts
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
@@ -48,4 +49,5 @@ object EdotatIcons {
     val Visible = Icons.Filled.Visibility
     val Invisible = Icons.Filled.VisibilityOff
     val Logout = Icons.AutoMirrored.Filled.Logout
+    val DeleteAccount = Icons.Filled.NoAccounts
 }

@@ -60,4 +60,8 @@
     <string name="settings_find_table_search">Search restaurant by name</string>
     <string name="settings_autologin_label">Log in automatically:</string>
     <string name="settings_find_table_method_preference_label">Preferred method to find your table:</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="settings_delete_account_dialog_title">Delete account?</string>
+    <string name="settings_delete_account_dialog_text">Are you sure you would like to delete this account permanently? This action cannot be undone.</string>
 </resources>
