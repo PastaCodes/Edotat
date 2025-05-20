@@ -35,6 +35,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.e.GlobalViewModel
+import at.e.Navigation
+import at.e.Navigation.ClearBackStack
 import at.e.R
 import at.e.api.Menu
 import at.e.api.Restaurant
@@ -50,10 +52,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalTime
-import kotlinx.datetime.format
-import kotlinx.datetime.format.Padding
-import kotlinx.datetime.format.char
 import kotlinx.datetime.toLocalDateTime
 
 object ChooseMenu {
@@ -103,7 +101,8 @@ object ChooseMenu {
                 onClick = {
                     if (enabled) {
                         gvm.selectMenu(menu)
-                        // nc.navigate(route = TODO())
+                        gvm.beginOrder()
+                        nc.navigate(route = Navigation.Destination.Home.Ordering, ClearBackStack)
                     }
                 },
                 enabled = enabled,

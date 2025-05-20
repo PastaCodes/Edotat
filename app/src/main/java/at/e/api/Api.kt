@@ -12,6 +12,8 @@ interface Api {
 
         suspend fun getActiveOrder(): Order?
 
+        suspend fun beginOrder(menu: Menu, table: Table): Order
+
         suspend fun deleteAccountAndClose()
 
         suspend fun close()
@@ -53,4 +55,6 @@ interface Api {
     suspend fun findTable(code: String, restaurant: Restaurant): Table?
 
     suspend fun getMenus(restaurant: Restaurant): List<Menu>
+
+    suspend fun getMenuItems(menu: Menu): Map<Menu.Category, Menu.Item>
 }

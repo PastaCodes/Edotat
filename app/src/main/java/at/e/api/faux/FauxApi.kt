@@ -4,13 +4,14 @@ import at.e.api.Account
 import at.e.api.Api
 import at.e.api.Location
 import at.e.api.Menu
+import at.e.api.Order
 import at.e.api.Restaurant
+import at.e.api.Table
 import at.e.api.faux.lib.ObjectFuzzySearch
 import at.e.lib.minuteOfDay
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock.System.now
 import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalTime
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -28,6 +29,7 @@ object FauxApi : Api {
     private val accounts = mutableMapOf<String, PasswordEntry>()
     private val tokens = mutableMapOf<String, TokenEntry>()
     private val connections = mutableMapOf<Api.Connection, Account>()
+    private val orders = mutableMapOf<Account, Order>()
 
     private val RESTAURANTS_BY_UUID =
         RESTAURANTS
@@ -101,7 +103,13 @@ object FauxApi : Api {
 
             override suspend fun getActiveOrder() = delayed {
                 assert(this in connections)
-                null // TODO
+                orders[this.account]
+            }
+
+            override suspend fun beginOrder(menu: Menu, table: Table) = delayed {
+                assert(this in connections)
+                assert(this.account !in orders)
+                Order(menu, table).also { orders[this.account] = it }
             }
 
             override suspend fun deleteAccountAndClose() {
@@ -211,6 +219,11 @@ object FauxApi : Api {
             Menu("Dinner menu", minuteOfDay(19, 0), minuteOfDay(21, 0), restaurant),
             Menu("Dummy menu", minuteOfDay(0, 0), minuteOfDay(24, 0), restaurant),
         )
+    }
+
+    override suspend fun getMenuItems(menu: Menu) = delayed {
+        val category = Menu.Category("Test category", menu)
+        mapOf(category to Menu.Item("Test item", category))
     }
 
     override suspend fun findTable(code: String, restaurant: Restaurant) = delayed {

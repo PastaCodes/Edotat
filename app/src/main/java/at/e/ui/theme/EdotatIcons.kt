@@ -2,9 +2,9 @@ package at.e.ui.theme
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NoAccounts
@@ -51,5 +51,5 @@ object EdotatIcons {
     val Invisible = Icons.Filled.VisibilityOff
     val Logout = Icons.AutoMirrored.Filled.Logout
     val DeleteAccount = Icons.Filled.NoAccounts
-    val Menu = Icons.Filled.Fastfood
+    val Menu = Icons.AutoMirrored.Filled.MenuBook
 }

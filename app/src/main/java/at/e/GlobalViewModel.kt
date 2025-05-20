@@ -269,6 +269,23 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         }
     }
 
+    fun beginOrder() {
+        viewModelScope.launch(Dispatchers.IO) {
+            when (val os = _orderState.value) {
+                is OrderState.SelectedMenu -> {
+                    when (val ls = _loginState.value) {
+                        is LoginState.LoggedIn -> {
+                            val order = ls.connection.beginOrder(os.menu, os.table)
+                            _orderState.value = OrderState.Active(order)
+                        }
+                        else -> throw IllegalStateException()
+                    }
+                }
+                else -> throw IllegalStateException()
+            }
+        }
+    }
+
     fun loadActiveOrder() {
         viewModelScope.launch(Dispatchers.IO) {
             when (val ls = _loginState.value) {

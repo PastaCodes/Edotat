@@ -17,6 +17,7 @@ import at.e.ui.Transitions.slidingComposable
 import at.e.ui.home.FindTable
 import at.e.ui.home.Redirect
 import at.e.ui.home.ChooseMenu
+import at.e.ui.home.Ordering
 import at.e.ui.loading.Loading
 import at.e.ui.login.Login
 import at.e.ui.login.Register
@@ -62,6 +63,9 @@ object Navigation {
 
             @Serializable
             data object ChooseMenu : Destination
+
+            @Serializable
+            data object Ordering : Destination
         }
 
         @Serializable
@@ -151,6 +155,12 @@ object Navigation {
                     gvm.bottomBar(true)
                     OrderStateBackHandler()
                     ChooseMenu.Screen(innerPadding, gvm, nc)
+                }
+                slidingComposable<Destination.Home.Ordering>(
+                    forcedDirection = gvm.forcedTransitionDirection,
+                ) {
+                    gvm.bottomBar(true)
+                    Ordering.Screen(innerPadding, gvm, nc)
                 }
             }
             navigation<Destination.RecentOrders>(
