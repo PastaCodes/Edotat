@@ -231,14 +231,67 @@ object FauxApi : Api {
         val desserts = Menu.Category("Desserts", menu)
         val drinks = Menu.Category("Drinks", menu)
         mapOf(
-            appetizers to listOf(Menu.Item("Test item", appetizers)),
-            pasta to listOf(),
-            meat to listOf(),
-            fish to listOf(),
-            sides to listOf(),
-            pizza to listOf(),
-            desserts to listOf(),
-            drinks to listOf(),
+            appetizers to listOf(
+                Menu.Item("Bruschetta con Pomodorini", appetizers),
+                Menu.Item("Caprese Salad", appetizers),
+                Menu.Item("Olive all'Ascolana", appetizers),
+            ),
+            pasta to listOf(
+                Menu.Item("Spaghetti alla Carbonara", pasta),
+                Menu.Item("Tagliatelle al Ragù Bolognese", pasta),
+                Menu.Item("Penne all'Arrabbiata", pasta),
+                Menu.Item("Lasagna al Forno", pasta),
+                Menu.Item("Ravioli Ricotta e Spinaci", pasta),
+                Menu.Item("Linguine alle Vongole", pasta),
+                Menu.Item("Bucatini all'Amatriciana", pasta),
+                Menu.Item("Orecchiette con Cime di Rapa", pasta),
+                Menu.Item("Pasta alla Norma", pasta),
+            ),
+            meat to listOf(
+                Menu.Item("Osso Buco", meat),
+                Menu.Item("Veal Marsala", meat),
+                Menu.Item("Saltimbocca alla Romana", meat),
+                Menu.Item("Bistecca alla Fiorentina", meat),
+                Menu.Item("Pollo alla Cacciatora", meat),
+                Menu.Item("Cotoletta alla Milanese", meat),
+                Menu.Item("Tagliata di Manzo", meat),
+            ),
+            fish to listOf(
+                Menu.Item("Grilled Branzino", fish),
+                Menu.Item("Fritto Misto di Mare", fish),
+                Menu.Item("Zuppa di Cozze", fish),
+                Menu.Item("Spiedini di Gamberi e Calamari", fish),
+                Menu.Item("Coda di Rospo alla Griglia", fish),
+            ),
+            sides to listOf(
+                Menu.Item("Mixed Salad", sides),
+                Menu.Item("Grilled Vegetables", sides),
+                Menu.Item("Roasted Potatoes with Rosemary", sides),
+                Menu.Item("French Fries", sides),
+            ),
+            pizza to listOf(
+                Menu.Item("Margherita", pizza),
+                Menu.Item("Quattro Stagioni", pizza),
+                Menu.Item("Diavola", pizza),
+                Menu.Item("Capricciosa", pizza),
+                Menu.Item("Quattro Formaggi", pizza),
+                Menu.Item("Prosciutto e Funghi", pizza),
+                Menu.Item("Salsiccia e Friarielli", pizza),
+                Menu.Item("Ortolana", pizza),
+            ),
+            desserts to listOf(
+                Menu.Item("Tiramisù", desserts),
+                Menu.Item("Panna Cotta", desserts),
+                Menu.Item("Cassata Siciliana", desserts),
+            ),
+            drinks to listOf(
+                Menu.Item("Still Water", drinks),
+                Menu.Item("Sparkling Water", drinks),
+                Menu.Item("Chinotto", drinks),
+                Menu.Item("Oransoda", drinks),
+                Menu.Item("Lemonsoda", drinks),
+                Menu.Item("Straight Up Ethanol In A Glass", drinks),
+            ),
         )
     }
 
