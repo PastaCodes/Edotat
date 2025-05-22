@@ -222,8 +222,24 @@ object FauxApi : Api {
     }
 
     override suspend fun getMenuItems(menu: Menu) = delayed {
-        val category = Menu.Category("Test category", menu)
-        mapOf(category to Menu.Item("Test item", category))
+        val appetizers = Menu.Category("Appetizers", menu)
+        val pasta = Menu.Category("Pasta", menu)
+        val meat = Menu.Category("Meat", menu)
+        val fish = Menu.Category("Fish", menu)
+        val sides = Menu.Category("Sides", menu)
+        val pizza = Menu.Category("Pizza", menu)
+        val desserts = Menu.Category("Desserts", menu)
+        val drinks = Menu.Category("Drinks", menu)
+        mapOf(
+            appetizers to listOf(Menu.Item("Test item", appetizers)),
+            pasta to listOf(),
+            meat to listOf(),
+            fish to listOf(),
+            sides to listOf(),
+            pizza to listOf(),
+            desserts to listOf(),
+            drinks to listOf(),
+        )
     }
 
     override suspend fun findTable(code: String, restaurant: Restaurant) = delayed {

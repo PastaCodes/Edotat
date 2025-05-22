@@ -56,5 +56,5 @@ interface Api {
 
     suspend fun getMenus(restaurant: Restaurant): List<Menu>
 
-    suspend fun getMenuItems(menu: Menu): Map<Menu.Category, Menu.Item>
+    suspend fun getMenuItems(menu: Menu): Map<Menu.Category, List<Menu.Item>>
 }
