@@ -1,5 +1,6 @@
 package at.e.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -55,7 +57,9 @@ object Ordering {
                     .consumeWindowInsets(innerPadding),
             ) {
                 Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .background(NavigationBarDefaults.containerColor),
                 ) {
                     for (category in i.data.keys) {
                         TextButton(
