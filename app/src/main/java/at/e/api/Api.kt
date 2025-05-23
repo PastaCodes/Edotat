@@ -14,6 +14,18 @@ interface Api {
 
         suspend fun beginOrder(menu: Menu, table: Table): Order
 
+        suspend fun getActiveSuborder(): Pair<Suborder, Map<Menu.Item, Int>>?
+
+        suspend fun beginSuborder(): Pair<Suborder, Map<Menu.Item, Int>>
+
+        suspend fun getItemQuantity(item: Menu.Item): Int
+
+        suspend fun incrementItemQuantity(item: Menu.Item): Int
+
+        suspend fun decrementItemQuantity(item: Menu.Item): Int
+
+        // suspend fun getSuborderHistory(order: Order? = null): List<Suborder>
+
         suspend fun deleteAccountAndClose()
 
         suspend fun close()

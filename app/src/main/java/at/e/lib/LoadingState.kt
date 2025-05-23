@@ -29,6 +29,8 @@ sealed interface LoadingState<out T> {
 
     fun isData(): Boolean
 
+    fun isLoading() = !this.isData()
+
     val forceData
         get() = (this as Data).data
 
@@ -38,3 +40,9 @@ sealed interface LoadingState<out T> {
             is Data -> transform(this.data)
         }
 }
+
+inline fun <T> LoadingState<T>.dataOrElse(fallback: () -> T) =
+    when (this) {
+        is LoadingState.Loading -> fallback()
+        is LoadingState.Data -> this.data
+    }

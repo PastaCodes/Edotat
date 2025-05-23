@@ -12,10 +12,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
@@ -23,7 +28,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
@@ -37,13 +48,17 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import at.e.GlobalViewModel
+import at.e.R
 import at.e.api.Menu
 import at.e.api.api
 import at.e.lib.LoadingState
+import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme.mediumAlpha
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 object Ordering {
     @Composable
@@ -53,10 +68,15 @@ object Ordering {
         val orderState by gvm.orderState.collectAsState()
         LaunchedEffect(orderState) {
             when (val os = orderState) {
-                is GlobalViewModel.OrderState.Active -> vm.fetchMenuItems(os.menu)
+                is GlobalViewModel.OrderState.Active -> {
+                    vm.fetchMenuItems(os.menu)
+                    vm.fetchActiveSuborder(gvm)
+                }
                 else -> { }
             }
         }
+
+        val hasActiveSuborder by vm.hasActiveSuborder.collectAsState()
 
         val items by vm.items.collectAsState()
         when (val i = items) {
@@ -66,6 +86,15 @@ object Ordering {
                     .padding(innerPadding)
                     .consumeWindowInsets(innerPadding),
             ) {
+                val selectedCategory by vm.selectedCategory.collectAsState()
+                val displayedCategory = with(selectedCategory) {
+                    if (this != null && this in i.data.keys) {
+                        this
+                    } else {
+                        i.data.keys.first()
+                    }
+                }
+
                 Row(
                     modifier = Modifier
                         .horizontalScroll(rememberScrollState())
@@ -73,7 +102,9 @@ object Ordering {
                 ) {
                     for (category in i.data.keys) {
                         TextButton(
-                            onClick = { },
+                            onClick = {
+                                vm.selectCategory(category)
+                            },
                             shape = RectangleShape,
                             contentPadding = PaddingValues(32.dp, 24.dp),
                         ) {
@@ -87,22 +118,24 @@ object Ordering {
                 LazyColumn(
                     modifier = Modifier.padding(24.dp),
                 ) {
-                    val selectedCategory = i.data.keys.toList()[1]
                     item {
                         Text(
-                            text = selectedCategory.name,
+                            text = displayedCategory.name,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.SemiBold,
                         )
                         Spacer(Modifier.height(16.dp))
                     }
-                    items(i.data[selectedCategory]!!) { item ->
+                    items(i.data[displayedCategory]!!) { item ->
+                        val quantity by remember(item) { derivedStateOf {
+                            vm.itemQuantities[item] ?: 0
+                        } }
+                        var isLoading by rememberSaveable(item) { mutableStateOf(false) }
                         OutlinedCard(
-                            onClick = { },
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Row(
-                                modifier = Modifier.padding(24.dp, 16.dp),
+                                modifier = Modifier.padding(24.dp, 16.dp, 12.dp, 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(
@@ -124,14 +157,61 @@ object Ordering {
                                     }
                                 }
                                 Text(
-                                    modifier = Modifier.weight(0.2f),
+                                    modifier = Modifier.weight(0.18f),
                                     text = item.price.toString(),
                                     fontSize = 16.sp,
                                     textAlign = TextAlign.Right,
                                 )
-                                Box( // TODO
+                                Spacer(modifier = Modifier.weight(0.02f))
+                                Column(
                                     modifier = Modifier.weight(0.1f),
-                                )
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Button (
+                                        modifier = Modifier.size(24.dp),
+                                        onClick = {
+                                            isLoading = true
+                                            vm.incrementItemQuantity(item, gvm) {
+                                                isLoading = false
+                                            }
+                                        },
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.textButtonColors(),
+                                        contentPadding = PaddingValues(),
+                                    ) {
+                                        Icon(
+                                            imageVector = EdotatIcons.Add,
+                                            contentDescription = gvm.app.getString(R.string.ordering_add),
+                                        )
+                                    }
+                                    Text(
+                                        modifier =
+                                            if (isLoading || hasActiveSuborder.isLoading()) {
+                                                Modifier.mediumAlpha()
+                                            } else {
+                                                Modifier
+                                            },
+                                        text = quantity.toString(),
+                                    )
+                                    Button (
+                                        modifier = Modifier.size(24.dp),
+                                        onClick = {
+                                            isLoading = true
+                                            vm.decrementItemQuantity(item, gvm) {
+                                                isLoading = false
+                                            }
+                                        },
+                                        enabled = quantity > 0,
+                                        shape = CircleShape,
+                                        colors = ButtonDefaults.textButtonColors(),
+                                        contentPadding = PaddingValues(),
+                                    ) {
+                                        Icon(
+                                            imageVector = EdotatIcons.Remove,
+                                            contentDescription = gvm.app.getString(R.string.ordering_remove),
+                                        )
+                                    }
+                                }
                             }
                         }
                         Spacer(Modifier.height(16.dp))
@@ -155,9 +235,80 @@ object Ordering {
         private val _items = LoadingState.flow<Map<Menu.Category, List<Menu.Item>>>()
         val items = _items.asStateFlow()
 
+        private val _selectedCategory = MutableStateFlow<Menu.Category?>(null)
+        val selectedCategory = _selectedCategory.asStateFlow()
+
+        private val _hasActiveSuborder = LoadingState.flow<Boolean>()
+        val hasActiveSuborder = _hasActiveSuborder.asStateFlow()
+
+        val itemQuantities = mutableStateMapOf<Menu.Item, Int>()
+
         fun fetchMenuItems(menu: Menu) {
             viewModelScope.launch(Dispatchers.IO) {
                 _items.value = LoadingState.Data(api.getMenuItems(menu))
+            }
+        }
+
+        fun selectCategory(category: Menu.Category) {
+            _selectedCategory.value = category
+        }
+
+        fun fetchActiveSuborder(gvm: GlobalViewModel) {
+            viewModelScope.launch(Dispatchers.IO) {
+                itemQuantities.clear()
+                val res = gvm.requireConnection.getActiveSuborder()
+                if (res != null) {
+                    _hasActiveSuborder.value = LoadingState.Data(true)
+                    itemQuantities.putAll(res.second)
+                } else {
+                    _hasActiveSuborder.value = LoadingState.Data(false)
+                }
+            }
+        }
+
+        private suspend fun checkOrBeginSuborder(gvm: GlobalViewModel) {
+            if (!_hasActiveSuborder.value.forceData) {
+                _hasActiveSuborder.value = LoadingState.Data(true)
+                itemQuantities.clear()
+                itemQuantities.putAll(gvm.requireConnection.beginSuborder().second)
+            }
+        }
+
+        fun incrementItemQuantity(
+            item: Menu.Item,
+            gvm: GlobalViewModel,
+            callback: (Boolean) -> Unit, // Parameter indicates success or failure
+        ) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    checkOrBeginSuborder(gvm)
+                    val prevQuantity = itemQuantities[item] ?: 0
+                    itemQuantities[item] = prevQuantity + 1
+                    itemQuantities[item] =
+                        gvm.requireConnection.incrementItemQuantity(item)
+                    callback(true)
+                } catch (_: Exception) {
+                    callback(false)
+                }
+            }
+        }
+
+        fun decrementItemQuantity(
+            item: Menu.Item,
+            gvm: GlobalViewModel,
+            callback: (Boolean) -> Unit, // Parameter indicates success or failure
+        ) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    checkOrBeginSuborder(gvm)
+                    val prevQuantity = itemQuantities[item] ?: 0
+                    itemQuantities[item] = max(prevQuantity - 1, 0)
+                    itemQuantities[item] =
+                        gvm.requireConnection.decrementItemQuantity(item)
+                    callback(true)
+                } catch (_: Exception) {
+                    callback(false)
+                }
             }
         }
     }

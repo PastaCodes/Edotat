@@ -6,6 +6,7 @@ import at.e.api.Location
 import at.e.api.Menu
 import at.e.api.Order
 import at.e.api.Restaurant
+import at.e.api.Suborder
 import at.e.api.Table
 import at.e.api.faux.lib.ObjectFuzzySearch
 import at.e.lib.euros
@@ -30,7 +31,8 @@ object FauxApi : Api {
     private val accounts = mutableMapOf<String, PasswordEntry>()
     private val tokens = mutableMapOf<String, TokenEntry>()
     private val connections = mutableMapOf<Api.Connection, Account>()
-    private val orders = mutableMapOf<Account, Order>()
+    private val orders = mutableMapOf<Account, OrderState>() // Active orders
+    private val orderHistory = mutableMapOf<Order, OrderHistory>()
 
     private val RESTAURANTS_BY_UUID =
         RESTAURANTS
@@ -104,29 +106,67 @@ object FauxApi : Api {
 
             override suspend fun getActiveOrder() = delayed {
                 assert(this in connections)
-                orders[this.account]
+                orders[this.account]?.order
             }
 
             override suspend fun beginOrder(menu: Menu, table: Table) = delayed {
                 assert(this in connections)
                 assert(this.account !in orders)
-                Order(menu, table).also { orders[this.account] = it }
+                Order(menu, table, this.account).also { orders[this.account] = OrderState(it) }
+            }
+
+            override suspend fun getActiveSuborder() = delayed {
+                assert(this in connections)
+                val state = orders[this.account]!!.activeSuborder
+                if (state == null) {
+                    null
+                } else {
+                    state.suborder to state.items
+                }
+            }
+
+            override suspend fun beginSuborder() = delayed {
+                assert(this in connections)
+                assert(orders[this.account]!!.activeSuborder == null)
+                val suborder = Suborder(orders[this.account]!!.order)
+                orders[this.account]!!.activeSuborder = SuborderState(suborder)
+                suborder to mapOf<Menu.Item, Int>()
+            }
+
+            override suspend fun getItemQuantity(item: Menu.Item) = delayed {
+                assert(this in connections)
+                orders[this.account]!!.activeSuborder!!.getItemQuantity(item)
+            }
+
+            override suspend fun incrementItemQuantity(item: Menu.Item) = delayed {
+                assert(this in connections)
+                orders[this.account]!!.activeSuborder!!.incrementItemQuantity(item)
+            }
+
+            override suspend fun decrementItemQuantity(item: Menu.Item) = delayed {
+                assert(this in connections)
+                orders[this.account]!!.activeSuborder!!.decrementItemQuantity(item)
             }
 
             override suspend fun deleteAccountAndClose() {
-                assert(this in connections)
-                accounts.entries.removeAll { (_, entry) ->
-                    entry.info.email == account.email
+                delayed {
+                    assert(this in connections)
+                    accounts.entries.removeAll { (_, entry) ->
+                        entry.info.email == account.email
+                    }
+                    tokens.entries.removeAll { (_, entry) ->
+                        entry.info.email == account.email
+                    }
+                    connections.remove(this)
                 }
-                tokens.entries.removeAll { (_, entry) ->
-                    entry.info.email == account.email
-                }
-                connections.remove(this)
             }
 
             override suspend fun close() {
-                assert(this in connections)
-                connections.remove(this)
+                delayed {
+                    assert(this in connections)
+                    connections.remove(this)
+                    Unit
+                }
             }
         }
             .also { connections[it] = account }
@@ -222,6 +262,7 @@ object FauxApi : Api {
         )
     }
 
+    // Item names and descriptions were chosen with the help of generative AI
     override suspend fun getMenuItems(menu: Menu) = delayed {
         val appetizers = Menu.Category("Appetizers", menu)
         val pasta = Menu.Category("Pasta", menu)

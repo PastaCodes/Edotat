@@ -68,4 +68,6 @@
     <string name="biometric_prompt_subtitle_encrypt">Encrypt access token</string>
     <string name="biometric_prompt_subtitle_decrypt">Decrypt access token</string>
     <string name="choose_menu_title">Choose a menu</string>
+    <string name="ordering_add">Increment quantity for this item</string>
+    <string name="ordering_remove">Decrement quantity for this item</string>
 </resources>

@@ -196,6 +196,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         }
     }
 
+    val requireConnection
+        get() = (this.loginState.value as LoginState.LoggedIn).connection
+
     sealed interface OrderState {
         data object Loading : OrderState
         data object None : OrderState
