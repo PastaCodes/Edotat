@@ -65,6 +65,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
     private val _bottomBar = MutableStateFlow(false)
     val bottomBar = _bottomBar.asStateFlow()
 
+    private val _floatingActionButton = MutableStateFlow<(@Composable () -> Unit)?>(null)
+    val floatingActionButton = _floatingActionButton.asStateFlow()
+
     private val _currentTab = MutableStateFlow<Navigation.Destination?>(null)
     val currentTab = _currentTab.asStateFlow()
 
@@ -136,8 +139,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         deletePreference(UserPreferences.Keys.FindTablePreferredMethod)
     }
 
-    fun bottomBar(active: Boolean) {
-        _bottomBar.value = active
+    fun configureScreen(hasBottomBar: Boolean, floatingActionButton: (@Composable () -> Unit)?) {
+        _bottomBar.value = hasBottomBar
+        _floatingActionButton.value = floatingActionButton
     }
 
     sealed interface LoginState {

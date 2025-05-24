@@ -70,4 +70,8 @@
     <string name="choose_menu_title">Choose a menu</string>
     <string name="ordering_add">Increment quantity for this item</string>
     <string name="ordering_remove">Decrement quantity for this item</string>
+    <string name="action_view_order">View you current order</string>
+    <string name="order_summary_back">Continue ordering</string>
+    <string name="order_summary_title">Order summary</string>
+    <string name="order_summary_empty">Your order is empty</string>
 </resources>

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
@@ -78,6 +79,7 @@ object Common {
         content: @Composable (PaddingValues) -> Unit,
     ) {
         val bottomBar by gvm.bottomBar.collectAsState()
+        val fab by gvm.floatingActionButton.collectAsState()
 
         EdotatTheme.Apply(gvm) {
             Surface(
@@ -88,6 +90,7 @@ object Common {
                     modifier = Modifier.fillMaxSize().systemBarsPadding(),
                     bottomBar = { if (bottomBar) BottomBar(gvm, nc) },
                     snackbarHost = { SnackbarHost(gvm) },
+                    floatingActionButton = { fab?.invoke() },
                     containerColor = Color.Transparent,
                     content = { innerPadding -> content(innerPadding) },
                 )
@@ -188,6 +191,23 @@ object Common {
                     fontSize = 16.sp,
                 )
             }
+        }
+    }
+
+    @Composable
+    fun OrderFloatingActionButton(gvm: GlobalViewModel, nc: NavController) {
+        FloatingActionButton(
+            modifier = Modifier.size(80.dp),
+            containerColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                nc.navigate(route = Navigation.Destination.Home.OrderSummary)
+            },
+        ) {
+            Icon(
+                modifier = Modifier.size(40.dp),
+                imageVector = EdotatIcons.Order,
+                contentDescription = gvm.app.getString(R.string.action_view_order)
+            )
         }
     }
 }

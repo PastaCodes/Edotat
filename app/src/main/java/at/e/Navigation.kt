@@ -13,10 +13,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
 import at.e.lib.Direction
+import at.e.ui.Common
 import at.e.ui.Transitions.slidingComposable
 import at.e.ui.home.FindTable
 import at.e.ui.home.Redirect
 import at.e.ui.home.ChooseMenu
+import at.e.ui.home.OrderSummary
 import at.e.ui.home.Ordering
 import at.e.ui.loading.Loading
 import at.e.ui.login.Login
@@ -66,6 +68,9 @@ object Navigation {
 
             @Serializable
             data object Ordering : Destination
+
+            @Serializable
+            data object OrderSummary : Destination
         }
 
         @Serializable
@@ -101,15 +106,24 @@ object Navigation {
             startDestination = Destination.Loading,
         ) {
             composable<Destination.Loading> {
-                gvm.bottomBar(false)
+                gvm.configureScreen(
+                    hasBottomBar = false,
+                    floatingActionButton = null,
+                )
                 Loading.Screen(innerPadding, activity, gvm, nc)
             }
             composable<Destination.Login> {
-                gvm.bottomBar(false)
+                gvm.configureScreen(
+                    hasBottomBar = false,
+                    floatingActionButton = null,
+                )
                 Login.Screen(innerPadding, activity, gvm, nc)
             }
             composable<Destination.Register> {
-                gvm.bottomBar(false)
+                gvm.configureScreen(
+                    hasBottomBar = false,
+                    floatingActionButton = null,
+                )
                 Register.Screen(innerPadding, activity, gvm, nc)
             }
             navigation<Destination.Home>(startDestination = Destination.Home.Redirect) {
@@ -119,48 +133,78 @@ object Navigation {
                 slidingComposable<Destination.Home.FindTable.ChooseMethod>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     FindTable.ChooseMethod.Screen(innerPadding, gvm, nc)
                 }
                 slidingComposable<Destination.Home.FindTable.Method.QrCode>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     FindTable.Method.QrCode.Screen(innerPadding, gvm, nc)
                 }
                 slidingComposable<Destination.Home.FindTable.Method.NearMe>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) { backStackEntry ->
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.NearMe>()
                     FindTable.Method.NearMe.Screen(innerPadding, route.isInitial, gvm, nc)
                 }
                 slidingComposable<Destination.Home.FindTable.Method.Search>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) { backStackEntry ->
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     val route = backStackEntry.toRoute<Destination.Home.FindTable.Method.Search>()
                     FindTable.Method.Search.Screen(innerPadding, route.isInitial, gvm, nc)
                 }
                 slidingComposable<Destination.Home.FindTable.EnterCode>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     OrderStateBackHandler()
                     FindTable.EnterCode.Screen(innerPadding, gvm, nc)
                 }
                 slidingComposable<Destination.Home.ChooseMenu>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     OrderStateBackHandler()
                     ChooseMenu.Screen(innerPadding, gvm, nc)
                 }
                 slidingComposable<Destination.Home.Ordering>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = { Common.OrderFloatingActionButton(gvm, nc) },
+                    )
                     Ordering.Screen(innerPadding, gvm, nc)
+                }
+                slidingComposable<Destination.Home.OrderSummary>(
+                    forcedDirection = gvm.forcedTransitionDirection,
+                ) {
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
+                    OrderSummary.Screen(innerPadding, gvm, nc)
                 }
             }
             navigation<Destination.RecentOrders>(
@@ -169,7 +213,10 @@ object Navigation {
                 slidingComposable<Destination.RecentOrders.Main>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     RecentOrders.Screen(innerPadding, gvm)
                 }
             }
@@ -179,7 +226,10 @@ object Navigation {
                 slidingComposable<Destination.AccountAndSettings.Main>(
                     forcedDirection = gvm.forcedTransitionDirection,
                 ) {
-                    gvm.bottomBar(true)
+                    gvm.configureScreen(
+                        hasBottomBar = true,
+                        floatingActionButton = null,
+                    )
                     AccountAndSettings.Screen(innerPadding, activity, gvm, nc)
                 }
             }

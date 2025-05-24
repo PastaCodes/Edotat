@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -52,15 +53,103 @@ import at.e.R
 import at.e.api.Menu
 import at.e.api.api
 import at.e.lib.LoadingState
+import at.e.ui.Common
+import at.e.ui.home.Ordering.ItemCard
 import at.e.ui.theme.EdotatIcons
+import at.e.ui.theme.EdotatTheme.lowAlpha
 import at.e.ui.theme.EdotatTheme.mediumAlpha
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.max
+import android.util.Log
 
 object Ordering {
+    @Composable
+    fun ItemCard(
+        item: Menu.Item,
+        quantity: Int,
+        isLoading: Boolean,
+        onPlusClick: () -> Unit,
+        onMinusClick: () -> Unit,
+        gvm: GlobalViewModel,
+    ) {
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                modifier = Modifier.padding(24.dp, 16.dp, 12.dp, 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(0.7f),
+                ) {
+                    Text(
+                        text = item.name,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (item.description != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            modifier = Modifier.mediumAlpha(),
+                            text = item.description,
+                            fontSize = 16.sp,
+                            fontStyle = FontStyle.Italic,
+                        )
+                    }
+                }
+                Text(
+                    modifier = Modifier.weight(0.18f),
+                    text = item.price.toString(),
+                    fontSize = 16.sp,
+                    textAlign = TextAlign.Right,
+                )
+                Spacer(modifier = Modifier.weight(0.02f))
+                Column(
+                    modifier = Modifier.weight(0.1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Button (
+                        modifier = Modifier.size(24.dp),
+                        onClick = onPlusClick,
+                        shape = CircleShape,
+                        colors = ButtonDefaults.textButtonColors(),
+                        contentPadding = PaddingValues(),
+                    ) {
+                        Icon(
+                            imageVector = EdotatIcons.Add,
+                            contentDescription = gvm.app.getString(R.string.ordering_add),
+                        )
+                    }
+                    Text(
+                        modifier =
+                            if (isLoading) {
+                                Modifier.lowAlpha()
+                            } else {
+                                Modifier
+                            },
+                        text = quantity.toString(),
+                    )
+                    Button (
+                        modifier = Modifier.size(24.dp),
+                        onClick = onMinusClick,
+                        enabled = quantity > 0,
+                        shape = CircleShape,
+                        colors = ButtonDefaults.textButtonColors(),
+                        contentPadding = PaddingValues(),
+                    ) {
+                        Icon(
+                            imageVector = EdotatIcons.Remove,
+                            contentDescription = gvm.app.getString(R.string.ordering_remove),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     @Composable
     fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
         val vm = viewModel<OrderingViewModel>()
@@ -131,89 +220,24 @@ object Ordering {
                             vm.itemQuantities[item] ?: 0
                         } }
                         var isLoading by rememberSaveable(item) { mutableStateOf(false) }
-                        OutlinedCard(
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(24.dp, 16.dp, 12.dp, 16.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(
-                                    modifier = Modifier.weight(0.7f),
-                                ) {
-                                    Text(
-                                        text = item.name,
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    if (item.description != null) {
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            modifier = Modifier.mediumAlpha(),
-                                            text = item.description,
-                                            fontSize = 16.sp,
-                                            fontStyle = FontStyle.Italic,
-                                        )
-                                    }
+                        ItemCard(
+                            item,
+                            quantity,
+                            isLoading || hasActiveSuborder.isLoading(),
+                            onPlusClick = {
+                                isLoading = true
+                                vm.incrementItemQuantity(item, gvm) {
+                                    isLoading = false
                                 }
-                                Text(
-                                    modifier = Modifier.weight(0.18f),
-                                    text = item.price.toString(),
-                                    fontSize = 16.sp,
-                                    textAlign = TextAlign.Right,
-                                )
-                                Spacer(modifier = Modifier.weight(0.02f))
-                                Column(
-                                    modifier = Modifier.weight(0.1f),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                ) {
-                                    Button (
-                                        modifier = Modifier.size(24.dp),
-                                        onClick = {
-                                            isLoading = true
-                                            vm.incrementItemQuantity(item, gvm) {
-                                                isLoading = false
-                                            }
-                                        },
-                                        shape = CircleShape,
-                                        colors = ButtonDefaults.textButtonColors(),
-                                        contentPadding = PaddingValues(),
-                                    ) {
-                                        Icon(
-                                            imageVector = EdotatIcons.Add,
-                                            contentDescription = gvm.app.getString(R.string.ordering_add),
-                                        )
-                                    }
-                                    Text(
-                                        modifier =
-                                            if (isLoading || hasActiveSuborder.isLoading()) {
-                                                Modifier.mediumAlpha()
-                                            } else {
-                                                Modifier
-                                            },
-                                        text = quantity.toString(),
-                                    )
-                                    Button (
-                                        modifier = Modifier.size(24.dp),
-                                        onClick = {
-                                            isLoading = true
-                                            vm.decrementItemQuantity(item, gvm) {
-                                                isLoading = false
-                                            }
-                                        },
-                                        enabled = quantity > 0,
-                                        shape = CircleShape,
-                                        colors = ButtonDefaults.textButtonColors(),
-                                        contentPadding = PaddingValues(),
-                                    ) {
-                                        Icon(
-                                            imageVector = EdotatIcons.Remove,
-                                            contentDescription = gvm.app.getString(R.string.ordering_remove),
-                                        )
-                                    }
+                            },
+                            onMinusClick = {
+                                isLoading = true
+                                vm.decrementItemQuantity(item, gvm) {
+                                    isLoading = false
                                 }
-                            }
-                        }
+                            },
+                            gvm,
+                        )
                         Spacer(Modifier.height(16.dp))
                     }
                 }
@@ -254,6 +278,7 @@ object Ordering {
         }
 
         fun fetchActiveSuborder(gvm: GlobalViewModel) {
+            _hasActiveSuborder.value = LoadingState.Loading
             viewModelScope.launch(Dispatchers.IO) {
                 itemQuantities.clear()
                 val res = gvm.requireConnection.getActiveSuborder()
@@ -303,11 +328,101 @@ object Ordering {
                     checkOrBeginSuborder(gvm)
                     val prevQuantity = itemQuantities[item] ?: 0
                     itemQuantities[item] = max(prevQuantity - 1, 0)
-                    itemQuantities[item] =
-                        gvm.requireConnection.decrementItemQuantity(item)
+                    val newQuantity = gvm.requireConnection.decrementItemQuantity(item)
+                    if (newQuantity == 0) {
+                        itemQuantities.remove(item)
+                    } else {
+                        itemQuantities[item] = newQuantity
+                    }
                     callback(true)
                 } catch (_: Exception) {
                     callback(false)
+                }
+            }
+        }
+    }
+}
+
+object OrderSummary {
+    @Composable
+    fun Screen(innerPadding: PaddingValues, gvm: GlobalViewModel, nc: NavController) {
+        val vm = viewModel<Ordering.OrderingViewModel>()
+
+        val orderState by gvm.orderState.collectAsState()
+        LaunchedEffect(orderState) {
+            if (orderState is GlobalViewModel.OrderState.Active) {
+                vm.fetchActiveSuborder(gvm)
+            }
+        }
+
+        val hasActiveSuborder by vm.hasActiveSuborder.collectAsState()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(24.dp)
+                .consumeWindowInsets(innerPadding)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Common.Back(textResId = R.string.order_summary_back, gvm, nc)
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = gvm.app.getString(R.string.order_summary_title),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            if (hasActiveSuborder.isData()) {
+                Log.i("PIEDI", "IsEmpty? " + vm.itemQuantities.isEmpty())
+                if (vm.itemQuantities.isEmpty()) {
+                    Spacer(Modifier.height(48.dp))
+                    Text(
+                        text = gvm.app.getString(R.string.order_summary_empty),
+                        fontSize = 20.sp,
+                        fontStyle = FontStyle.Italic,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .lowAlpha(),
+                    )
+                } else {
+                    Spacer(Modifier.height(32.dp))
+                    for (item in vm.itemQuantities.keys) {
+                        val quantity by remember(item) {
+                            derivedStateOf {
+                                vm.itemQuantities[item] ?: 0
+                            }
+                        }
+                        var isLoading by rememberSaveable(item) { mutableStateOf(false) }
+                        ItemCard(
+                            item,
+                            quantity,
+                            isLoading || hasActiveSuborder.isLoading(),
+                            onPlusClick = {
+                                isLoading = true
+                                vm.incrementItemQuantity(item, gvm) {
+                                    isLoading = false
+                                }
+                            },
+                            onMinusClick = {
+                                isLoading = true
+                                vm.decrementItemQuantity(item, gvm) {
+                                    isLoading = false
+                                }
+                            },
+                            gvm,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator()
                 }
             }
         }
