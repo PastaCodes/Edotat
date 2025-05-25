@@ -3,6 +3,7 @@ package at.e.ui.theme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -58,4 +59,5 @@ object EdotatIcons {
     val Add = Icons.Filled.Add
     val Remove = Icons.Filled.Remove
     val Order = Icons.Filled.DinnerDining
+    val Send = Icons.AutoMirrored.Filled.Send
 }

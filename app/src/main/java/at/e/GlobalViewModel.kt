@@ -215,6 +215,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
         data class Active(val order: Order) : SelectedMenu(order.menu, order.table)
     }
 
+    val requireOrder
+        get() = (this.orderState.value as OrderState.Active).order
+
     fun resetOrder() {
         assert(_orderState.value !is OrderState.Active)
         _orderState.value = OrderState.None

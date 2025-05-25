@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.navigation.NavController
-import at.e.Authentication
 import at.e.GlobalViewModel
 import at.e.Navigation
 import at.e.lib.LoadingState

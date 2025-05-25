@@ -26,3 +26,19 @@ object Money {
         override fun toString() = this.currency.toString(this.smallestUnitAmount)
     }
 }
+
+operator fun Money.Amount.times(quantity: Int) =
+    Money.Amount(this.smallestUnitAmount * quantity, this.currency)
+
+inline fun <T> Iterable<T>.sumOf(
+    currency: Money.Currency,
+    selector: (T) -> Money.Amount,
+): Money.Amount {
+    var sum = 0
+    for (element in this) {
+        val amount = selector(element)
+        assert(amount.currency == currency)
+        sum += amount.smallestUnitAmount
+    }
+    return Money.Amount(sum, currency)
+}

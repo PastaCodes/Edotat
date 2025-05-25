@@ -51,7 +51,7 @@ import at.e.ui.theme.EdotatTheme.mediumAlpha
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
+import kotlinx.datetime.Clock.System.now
 import kotlinx.datetime.toLocalDateTime
 
 object ChooseMenu {
@@ -93,7 +93,7 @@ object ChooseMenu {
 
     @Composable
     fun ColumnScope.MenuResults(vm: MenusViewModel, gvm: GlobalViewModel, nc: NavController) {
-        val now = Clock.System.now()
+        val now = now()
 
         @Composable
         fun MenuCard(menu: Menu, enabled: Boolean, nc: NavController) {

@@ -1,6 +1,7 @@
 package at.e.api
 
 import at.e.api.faux.FauxApi
+import at.e.lib.Money
 import kotlin.uuid.Uuid
 
 val api: Api =
@@ -14,17 +15,19 @@ interface Api {
 
         suspend fun beginOrder(menu: Menu, table: Table): Order
 
-        suspend fun getActiveSuborder(): Pair<Suborder, Map<Menu.Item, Int>>?
+        suspend fun getActiveSuborder(): Pair<Suborder, List<Order.Entry>>?
 
-        suspend fun beginSuborder(): Pair<Suborder, Map<Menu.Item, Int>>
-
-        suspend fun getItemQuantity(item: Menu.Item): Int
+        suspend fun beginSuborder(): Pair<Suborder, List<Order.Entry>>
 
         suspend fun incrementItemQuantity(item: Menu.Item): Int
 
         suspend fun decrementItemQuantity(item: Menu.Item): Int
 
-        // suspend fun getSuborderHistory(order: Order? = null): List<Suborder>
+        suspend fun sendSuborder()
+
+        suspend fun getSuborderHistory(): List<Pair<Suborder, List<Order.Entry>>>
+
+        suspend fun getCurrentTotal(currency: Money.Currency): Money.Amount
 
         suspend fun deleteAccountAndClose()
 

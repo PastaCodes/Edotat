@@ -9,11 +9,15 @@ import at.e.api.Restaurant
 import at.e.api.Suborder
 import at.e.api.Table
 import at.e.api.faux.lib.ObjectFuzzySearch
+import at.e.lib.Money
 import at.e.lib.euros
 import at.e.lib.minuteOfDay
+import at.e.lib.sumOf
+import at.e.lib.times
 import kotlinx.coroutines.delay
 import kotlinx.datetime.Clock.System.now
 import kotlinx.datetime.Instant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -127,15 +131,14 @@ object FauxApi : Api {
 
             override suspend fun beginSuborder() = delayed {
                 assert(this in connections)
-                assert(orders[this.account]!!.activeSuborder == null)
-                val suborder = Suborder(orders[this.account]!!.order)
-                orders[this.account]!!.activeSuborder = SuborderState(suborder)
-                suborder to mapOf<Menu.Item, Int>()
-            }
-
-            override suspend fun getItemQuantity(item: Menu.Item) = delayed {
-                assert(this in connections)
-                orders[this.account]!!.activeSuborder!!.getItemQuantity(item)
+                val order = orders[this.account]!!
+                assert(order.activeSuborder == null)
+                val suborder = Suborder(
+                    order.order,
+                    started = now().toLocalDateTime(order.order.table.restaurant.timeZone),
+                )
+                order.activeSuborder = SuborderState(suborder)
+                suborder to listOf<Order.Entry>()
             }
 
             override suspend fun incrementItemQuantity(item: Menu.Item) = delayed {
@@ -146,6 +149,31 @@ object FauxApi : Api {
             override suspend fun decrementItemQuantity(item: Menu.Item) = delayed {
                 assert(this in connections)
                 orders[this.account]!!.activeSuborder!!.decrementItemQuantity(item)
+            }
+
+            override suspend fun sendSuborder() {
+                delayed {
+                    assert(this in connections)
+                    val order = orders[this.account]!!
+                    val suborder = order.activeSuborder!!
+                    suborder.suborder.sent =
+                        now().toLocalDateTime(order.order.table.restaurant.timeZone)
+                    order.suborderHistory.add(suborder)
+                    order.activeSuborder = null
+                }
+            }
+
+            override suspend fun getSuborderHistory() = delayed {
+                assert(this in connections)
+                orders[this.account]!!.suborderHistory
+                    .map { state -> state.suborder to state.items }
+            }
+
+            override suspend fun getCurrentTotal(currency: Money.Currency) = delayed {
+                assert(this in connections)
+                orders[this.account]!!.suborderHistory
+                    .flatMap { suborder -> suborder.items }
+                    .sumOf(currency) { entry -> entry.item.price * entry.quantity }
             }
 
             override suspend fun deleteAccountAndClose() {

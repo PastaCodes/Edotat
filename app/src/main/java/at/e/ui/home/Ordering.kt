@@ -1,5 +1,6 @@
 package at.e.ui.home
 
+import android.text.format.DateFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.OutlinedCard
@@ -31,7 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,19 +55,25 @@ import androidx.navigation.NavController
 import at.e.GlobalViewModel
 import at.e.R
 import at.e.api.Menu
+import at.e.api.Order
+import at.e.api.Suborder
 import at.e.api.api
 import at.e.lib.LoadingState
+import at.e.lib.Money
+import at.e.lib.formatLocalMinuteOfDay
+import at.e.lib.replaceOne
+import at.e.lib.times
+import at.e.lib.toMinuteOfDay
 import at.e.ui.Common
 import at.e.ui.home.Ordering.ItemCard
 import at.e.ui.theme.EdotatIcons
+import at.e.ui.theme.EdotatTheme
 import at.e.ui.theme.EdotatTheme.lowAlpha
 import at.e.ui.theme.EdotatTheme.mediumAlpha
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.math.max
-import android.util.Log
 
 object Ordering {
     @Composable
@@ -129,8 +139,12 @@ object Ordering {
                                 Modifier.lowAlpha()
                             } else {
                                 Modifier
-                            },
+                            }
+                                .fillMaxWidth()
+                                .height(20.dp)
+                                .wrapContentHeight(align = Alignment.CenterVertically),
                         text = quantity.toString(),
+                        textAlign = TextAlign.Center,
                     )
                     Button (
                         modifier = Modifier.size(24.dp),
@@ -159,7 +173,7 @@ object Ordering {
             when (val os = orderState) {
                 is GlobalViewModel.OrderState.Active -> {
                     vm.fetchMenuItems(os.menu)
-                    vm.fetchActiveSuborder(gvm)
+                    vm.fetchSuborder(gvm)
                 }
                 else -> { }
             }
@@ -217,7 +231,7 @@ object Ordering {
                     }
                     items(i.data[displayedCategory]!!) { item ->
                         val quantity by remember(item) { derivedStateOf {
-                            vm.itemQuantities[item] ?: 0
+                            vm.itemQuantities.find { it.item == item }?.quantity ?: 0
                         } }
                         var isLoading by rememberSaveable(item) { mutableStateOf(false) }
                         ItemCard(
@@ -265,7 +279,11 @@ object Ordering {
         private val _hasActiveSuborder = LoadingState.flow<Boolean>()
         val hasActiveSuborder = _hasActiveSuborder.asStateFlow()
 
-        val itemQuantities = mutableStateMapOf<Menu.Item, Int>()
+        val itemQuantities = mutableStateListOf<Order.Entry>()
+
+        val suborderHistory = mutableStateListOf<Pair<Suborder, List<Order.Entry>>>()
+
+        val total = mutableStateOf<Money.Amount?>(null)
 
         fun fetchMenuItems(menu: Menu) {
             viewModelScope.launch(Dispatchers.IO) {
@@ -277,16 +295,29 @@ object Ordering {
             _selectedCategory.value = category
         }
 
-        fun fetchActiveSuborder(gvm: GlobalViewModel) {
+        fun fetchSuborder(gvm: GlobalViewModel, includeHistory: Boolean = false) {
             _hasActiveSuborder.value = LoadingState.Loading
             viewModelScope.launch(Dispatchers.IO) {
-                itemQuantities.clear()
                 val res = gvm.requireConnection.getActiveSuborder()
                 if (res != null) {
                     _hasActiveSuborder.value = LoadingState.Data(true)
-                    itemQuantities.putAll(res.second)
+                    itemQuantities.clear()
+                    itemQuantities.addAll(res.second)
                 } else {
+                    itemQuantities.clear()
                     _hasActiveSuborder.value = LoadingState.Data(false)
+                }
+            }
+            if (includeHistory) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    val history = gvm.requireConnection.getSuborderHistory()
+                    suborderHistory.clear()
+                    suborderHistory.addAll(history)
+                }
+                viewModelScope.launch(Dispatchers.IO) {
+                    total.value = gvm.requireConnection.getCurrentTotal(
+                        currency = gvm.requireOrder.table.restaurant.currency
+                    )
                 }
             }
         }
@@ -295,7 +326,7 @@ object Ordering {
             if (!_hasActiveSuborder.value.forceData) {
                 _hasActiveSuborder.value = LoadingState.Data(true)
                 itemQuantities.clear()
-                itemQuantities.putAll(gvm.requireConnection.beginSuborder().second)
+                itemQuantities.addAll(gvm.requireConnection.beginSuborder().second)
             }
         }
 
@@ -307,10 +338,14 @@ object Ordering {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     checkOrBeginSuborder(gvm)
-                    val prevQuantity = itemQuantities[item] ?: 0
-                    itemQuantities[item] = prevQuantity + 1
-                    itemQuantities[item] =
-                        gvm.requireConnection.incrementItemQuantity(item)
+                    val existingEntry = itemQuantities.find { it.item == item }
+                    if (existingEntry != null) {
+                        val newEntry = Order.Entry(item, existingEntry.quantity + 1)
+                        itemQuantities.replaceOne(existingEntry, newEntry)
+                    } else {
+                        itemQuantities.add(Order.Entry(item, 1))
+                    }
+                    gvm.requireConnection.incrementItemQuantity(item)
                     callback(true)
                 } catch (_: Exception) {
                     callback(false)
@@ -326,18 +361,25 @@ object Ordering {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     checkOrBeginSuborder(gvm)
-                    val prevQuantity = itemQuantities[item] ?: 0
-                    itemQuantities[item] = max(prevQuantity - 1, 0)
-                    val newQuantity = gvm.requireConnection.decrementItemQuantity(item)
-                    if (newQuantity == 0) {
-                        itemQuantities.remove(item)
+                    val existingEntry = itemQuantities.find { it.item == item }!!
+                    if (existingEntry.quantity == 1) {
+                        itemQuantities.remove(existingEntry)
                     } else {
-                        itemQuantities[item] = newQuantity
+                        val newEntry = Order.Entry(item, existingEntry.quantity - 1)
+                        itemQuantities.replaceOne(existingEntry, newEntry)
                     }
+                    gvm.requireConnection.decrementItemQuantity(item)
                     callback(true)
                 } catch (_: Exception) {
                     callback(false)
                 }
+            }
+        }
+
+        fun sendSuborder(gvm: GlobalViewModel) {
+            viewModelScope.launch(Dispatchers.IO) {
+                gvm.requireConnection.sendSuborder()
+                fetchSuborder(gvm, includeHistory = true)
             }
         }
     }
@@ -351,11 +393,12 @@ object OrderSummary {
         val orderState by gvm.orderState.collectAsState()
         LaunchedEffect(orderState) {
             if (orderState is GlobalViewModel.OrderState.Active) {
-                vm.fetchActiveSuborder(gvm)
+                vm.fetchSuborder(gvm, includeHistory = true)
             }
         }
 
         val hasActiveSuborder by vm.hasActiveSuborder.collectAsState()
+        val total by vm.total
 
         Column(
             modifier = Modifier
@@ -372,10 +415,9 @@ object OrderSummary {
                 fontSize = 32.sp,
                 fontWeight = FontWeight.SemiBold,
             )
+            Spacer(Modifier.height(32.dp))
             if (hasActiveSuborder.isData()) {
-                Log.i("PIEDI", "IsEmpty? " + vm.itemQuantities.isEmpty())
                 if (vm.itemQuantities.isEmpty()) {
-                    Spacer(Modifier.height(48.dp))
                     Text(
                         text = gvm.app.getString(R.string.order_summary_empty),
                         fontSize = 20.sp,
@@ -383,14 +425,16 @@ object OrderSummary {
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(100.dp)
+                            .wrapContentHeight(align = Alignment.CenterVertically)
                             .lowAlpha(),
                     )
+                    Spacer(Modifier.height(16.dp))
                 } else {
-                    Spacer(Modifier.height(32.dp))
-                    for (item in vm.itemQuantities.keys) {
+                    for ((item, _) in vm.itemQuantities) {
                         val quantity by remember(item) {
                             derivedStateOf {
-                                vm.itemQuantities[item] ?: 0
+                                vm.itemQuantities.find { it.item == item }?.quantity ?: 0
                             }
                         }
                         var isLoading by rememberSaveable(item) { mutableStateOf(false) }
@@ -414,6 +458,68 @@ object OrderSummary {
                         )
                         Spacer(Modifier.height(16.dp))
                     }
+                }
+                Button(
+                    onClick = {
+                        vm.sendSuborder(gvm)
+                    },
+                    enabled = vm.itemQuantities.isNotEmpty(),
+                    shape = EdotatTheme.RoundedCornerShape,
+                    modifier = Modifier
+                        .size(160.dp, 56.dp)
+                        .align(Alignment.End),
+                ) {
+                    Text(
+                        text = gvm.app.getString(R.string.order_summary_send),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        imageVector = EdotatIcons.Send,
+                        contentDescription = null, // Icon is decorative
+                    )
+                }
+                Spacer(Modifier.height(32.dp))
+                for ((suborder, items) in vm.suborderHistory) {
+                    for ((item, quantity) in items) {
+                        Row {
+                            Text(
+                                text = "${quantity}x",
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                modifier = Modifier.weight(1f),
+                                text = item.name,
+                            )
+                            Text(
+                                text = (item.price * quantity).toString(),
+                                textAlign = TextAlign.End,
+                            )
+                        }
+                    }
+                    Text(
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .lowAlpha(),
+                        text = gvm.app.getString(
+                            R.string.order_summary_sent_at,
+                            formatLocalMinuteOfDay(
+                                suborder.sent!!.time.toMinuteOfDay(),
+                                is24Hour = DateFormat.is24HourFormat(gvm.app),
+                            )
+                        ),
+                        fontStyle = FontStyle.Italic,
+                    )
+                    HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                }
+                if (total != null) {
+                    Text(
+                        modifier = Modifier.align(Alignment.End),
+                        text = total!!.toString(),
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
                 }
             } else {
                 Box(

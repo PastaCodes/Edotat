@@ -10,5 +10,10 @@ data class Menu(
 ) {
     data class Category(val name: String, val menu: Menu)
 
-    data class Item(val name: String, val description: String?, val price: Money.Amount, val category: Category)
+    data class Item(
+        val name: String,
+        val description: String?,
+        val price: Money.Amount,
+        val category: Category,
+    )
 }
