@@ -116,7 +116,12 @@ object FauxApi : Api {
             override suspend fun beginOrder(menu: Menu, table: Table) = delayed {
                 assert(this in connections)
                 assert(this.account !in orders)
-                Order(menu, table, this.account).also { orders[this.account] = OrderState(it) }
+                Order(
+                    menu,
+                    table,
+                    this.account,
+                    started = now().toLocalDateTime(table.restaurant.timeZone),
+                ).also { orders[this.account] = OrderState(it) }
             }
 
             override suspend fun getActiveSuborder() = delayed {
@@ -189,6 +194,18 @@ object FauxApi : Api {
                         orderHistory[this.account] = mutableListOf()
                     }
                     orderHistory[this.account]!!.add(orderState.toHistory())
+                }
+            }
+
+            override suspend fun getOrderHistory() = delayed {
+                assert(this in connections)
+                if (this.account !in orderHistory) {
+                    return@delayed listOf()
+                }
+                orderHistory[this.account]!!.map { history ->
+                    history.order to history.suborders.map { suborder ->
+                        suborder.suborder to suborder.items
+                    }
                 }
             }
 

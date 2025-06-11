@@ -217,7 +217,7 @@ object Navigation {
                         hasBottomBar = true,
                         floatingActionButton = null,
                     )
-                    RecentOrders.Screen(innerPadding, gvm)
+                    RecentOrders.Screen(innerPadding, gvm, nc)
                 }
             }
             navigation<Destination.AccountAndSettings>(

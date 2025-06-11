@@ -2,7 +2,7 @@ package at.e.api
 
 import kotlinx.datetime.LocalDateTime
 
-data class Order(val menu: Menu, val table: Table, val account: Account) {
+data class Order(val menu: Menu, val table: Table, val account: Account, val started: LocalDateTime) {
     data class Entry(val item: Menu.Item, val quantity: Int)
 }
 

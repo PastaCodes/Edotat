@@ -31,6 +31,8 @@ interface Api {
 
         suspend fun endOrder() // In the real world this would need a verification system
 
+        suspend fun getOrderHistory(): List<Pair<Order, List<Pair<Suborder, List<Order.Entry>>>>>
+
         suspend fun deleteAccountAndClose()
 
         suspend fun close()

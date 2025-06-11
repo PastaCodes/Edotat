@@ -1,6 +1,12 @@
 package at.e.lib
 
+import android.content.Context
+import android.text.format.DateFormat
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.format
+import kotlinx.datetime.format.FormatStringsInDatetimeFormats
+import kotlinx.datetime.format.byUnicodePattern
 
 fun minuteOfDay(hour24: Int, minute: Int) = hour24 * 60 + minute
 
@@ -25,4 +31,10 @@ fun LocalTime.toMinuteOfDay() = minuteOfDay(this.hour, this.minute)
 
 fun LocalTime.inMinuteOfDayRange(startMinute: Int, endMinute: Int): Boolean {
     return this.toMinuteOfDay() in startMinute..endMinute
+}
+
+@OptIn(FormatStringsInDatetimeFormats::class)
+fun formatLocalDate(date: LocalDate, context: Context): String {
+    val pattern = DateFormat.getBestDateTimePattern(context.resources.configuration.locales[0], "ddMMyyyy")
+    return date.format(LocalDate.Format { byUnicodePattern(pattern) })
 }

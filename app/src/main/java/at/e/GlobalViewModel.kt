@@ -26,7 +26,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import at.e.Navigation.ClearBackStack
 import at.e.UserPreferences.Companion.dataStore
 import at.e.api.Account
 import at.e.api.Api
@@ -460,10 +459,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
                 taskResult.result!!.let {
                     viewModelScope.launch {
                         requireConnection.endOrder()
+                        _orderState.value = OrderState.None
+                        switchTab(Navigation.Destination.RecentOrders, nc)
                     }
-                    _orderState.value = OrderState.None
-                    nc.navigate(route = Navigation.Destination.Home.Redirect, ClearBackStack)
-                    nc.navigate(route = Navigation.Destination.RecentOrders)
                 }
             }
             CommonStatusCodes.CANCELED -> { }

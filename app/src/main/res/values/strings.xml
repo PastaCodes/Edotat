@@ -78,4 +78,7 @@
     <string name="order_summary_sent_at">Sent at %1$s</string>
     <string name="order_summary_pay_and_leave">Pay and leave</string>
     <string name="order_summary_payment_failed">Something went wrong :/</string>
+    <string name="recent_orders_title">Your orders</string>
+    <string name="recent_orders_empty">You haven\'t made any orders yet</string>
+    <string name="recent_orders_card_title_format">%1$s \u2022 Table %2$s</string>
 </resources>
