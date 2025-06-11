@@ -177,9 +177,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
     }
 
     fun logout() {
+        _loginState.value = LoginState.LoggedOut
         viewModelScope.launch(Dispatchers.IO) {
             Authentication.logout(this@GlobalViewModel)
-            _loginState.value = LoginState.LoggedOut
         }
     }
 

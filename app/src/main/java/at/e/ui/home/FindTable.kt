@@ -5,6 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
@@ -84,6 +85,8 @@ import at.e.ui.shakeable
 import at.e.ui.theme.EdotatIcons
 import at.e.ui.theme.EdotatTheme
 import at.e.ui.theme.EdotatTheme.mediumAlpha
+import com.google.android.gms.common.moduleinstall.ModuleInstall
+import com.google.android.gms.common.moduleinstall.ModuleInstallRequest
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
@@ -304,23 +307,29 @@ object FindTable {
                         .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
                         .build()
                     val scanner = GmsBarcodeScanning.getClient(gvm.app, scannerOptions)
-                    scanner.startScan()
-                        .addOnSuccessListener { barcode ->
-                            try {
-                                val rawValue = barcode.rawValue!!
-                                val uuid = Uuid.parseHex(rawValue)
-                                gvm.findTable(uuid)
-                            } catch (_: Exception) {
-                                gvm.notifyInvalidQrCode()
-                                nc.navigateUp()
-                            }
-                        }
-                        .addOnCanceledListener {
-                            nc.navigateUp()
-                        }
-                        .addOnFailureListener {
-                            gvm.notifyInvalidQrCode()
-                            nc.navigateUp()
+                    val moduleInstallRequest = ModuleInstallRequest.newBuilder().addApi(scanner).build()
+                    ModuleInstall.getClient(gvm.app)
+                        .installModules(moduleInstallRequest)
+                        .addOnSuccessListener {
+                            scanner.startScan()
+                                .addOnSuccessListener { barcode ->
+                                    try {
+                                        val rawValue = barcode.rawValue!!
+                                        val uuid = Uuid.parseHex(rawValue)
+                                        gvm.findTable(uuid)
+                                    } catch (_: Exception) {
+                                        gvm.notifyInvalidQrCode()
+                                        nc.navigateUp()
+                                    }
+                                }
+                                .addOnCanceledListener {
+                                    nc.navigateUp()
+                                }
+                                .addOnFailureListener { exception ->
+                                    Log.e("Debugger", "GmsBarcodeScanner exception", exception)
+                                    gvm.notifyInvalidQrCode()
+                                    nc.navigateUp()
+                                }
                         }
                 }
 
