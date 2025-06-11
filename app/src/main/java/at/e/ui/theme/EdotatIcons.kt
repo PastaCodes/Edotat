@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.DinnerDining
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.NoAccounts
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Restaurant
@@ -60,4 +61,5 @@ object EdotatIcons {
     val Remove = Icons.Filled.Remove
     val Order = Icons.Filled.DinnerDining
     val Send = Icons.AutoMirrored.Filled.Send
+    val Pay = Icons.Filled.Paid
 }

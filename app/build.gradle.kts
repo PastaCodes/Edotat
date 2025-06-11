@@ -65,6 +65,7 @@ dependencies {
     implementation(libs.android.material)
     implementation(libs.play.services.codescanner)
     implementation(libs.play.services.location)
+    implementation(libs.play.services.wallet)
     implementation(libs.fuzzywuzzy) // Required by faux api
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

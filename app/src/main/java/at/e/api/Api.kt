@@ -29,6 +29,8 @@ interface Api {
 
         suspend fun getCurrentTotal(currency: Money.Currency): Money.Amount
 
+        suspend fun endOrder() // In the real world this would need a verification system
+
         suspend fun deleteAccountAndClose()
 
         suspend fun close()

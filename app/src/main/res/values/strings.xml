@@ -76,4 +76,6 @@
     <string name="order_summary_empty">Your order is empty</string>
     <string name="order_summary_send">Send</string>
     <string name="order_summary_sent_at">Sent at %1$s</string>
+    <string name="order_summary_pay_and_leave">Pay and leave</string>
+    <string name="order_summary_payment_failed">Something went wrong :/</string>
 </resources>

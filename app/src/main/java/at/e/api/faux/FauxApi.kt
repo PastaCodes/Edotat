@@ -36,7 +36,7 @@ object FauxApi : Api {
     private val tokens = mutableMapOf<String, TokenEntry>()
     private val connections = mutableMapOf<Api.Connection, Account>()
     private val orders = mutableMapOf<Account, OrderState>() // Active orders
-    private val orderHistory = mutableMapOf<Order, OrderHistory>()
+    private val orderHistory = mutableMapOf<Account, MutableList<OrderHistory>>()
 
     private val RESTAURANTS_BY_UUID =
         RESTAURANTS
@@ -148,7 +148,11 @@ object FauxApi : Api {
 
             override suspend fun decrementItemQuantity(item: Menu.Item) = delayed {
                 assert(this in connections)
-                orders[this.account]!!.activeSuborder!!.decrementItemQuantity(item)
+                val newQuantity = orders[this.account]!!.activeSuborder!!.decrementItemQuantity(item)
+                if (orders[this.account]!!.activeSuborder!!.items.isEmpty()) {
+                    orders[this.account]!!.activeSuborder = null
+                }
+                newQuantity
             }
 
             override suspend fun sendSuborder() {
@@ -174,6 +178,18 @@ object FauxApi : Api {
                 orders[this.account]!!.suborderHistory
                     .flatMap { suborder -> suborder.items }
                     .sumOf(currency) { entry -> entry.item.price * entry.quantity }
+            }
+
+            override suspend fun endOrder() {
+                delayed {
+                    assert(this in connections)
+                    assert(orders[this.account]!!.activeSuborder == null)
+                    val orderState = orders.remove(this.account)!!
+                    if (this.account !in orderHistory) {
+                        orderHistory[this.account] = mutableListOf()
+                    }
+                    orderHistory[this.account]!!.add(orderState.toHistory())
+                }
             }
 
             override suspend fun deleteAccountAndClose() {

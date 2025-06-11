@@ -18,6 +18,7 @@ serialization = "1.7.3"
 material = "1.12.0"
 playServicesCodeScanner = "16.1.0"
 playServicesLocation = "21.3.0"
+playServicesWallet = "19.4.0"
 fuzzywuzzy = "1.0.1" # Required by faux api
 
 [libraries]
@@ -45,6 +46,7 @@ kotlinx-serialization = { group = "org.jetbrains.kotlinx", name = "kotlinx-seria
 android-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 play-services-codescanner = { group = "com.google.android.gms", name = "play-services-code-scanner", version.ref = "playServicesCodeScanner" }
 play-services-location = { group = "com.google.android.gms", name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-wallet = { group = "com.google.android.gms", name = "play-services-wallet", version.ref = "playServicesWallet" }
 fuzzywuzzy = { group = "com.github.jens-muenker", name = "fuzzywuzzy-kotlin", version.ref = "fuzzywuzzy" } # Required by faux api
 
 [plugins]

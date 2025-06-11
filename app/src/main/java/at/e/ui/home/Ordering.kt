@@ -26,6 +26,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
@@ -60,6 +61,7 @@ import at.e.api.Suborder
 import at.e.api.api
 import at.e.lib.LoadingState
 import at.e.lib.Money
+import at.e.lib.dataOr
 import at.e.lib.formatLocalMinuteOfDay
 import at.e.lib.replaceOne
 import at.e.lib.times
@@ -364,6 +366,9 @@ object Ordering {
                     val existingEntry = itemQuantities.find { it.item == item }!!
                     if (existingEntry.quantity == 1) {
                         itemQuantities.remove(existingEntry)
+                        if (itemQuantities.isEmpty()) {
+                            _hasActiveSuborder.value = LoadingState.Data(false)
+                        }
                     } else {
                         val newEntry = Order.Entry(item, existingEntry.quantity - 1)
                         itemQuantities.replaceOne(existingEntry, newEntry)
@@ -399,6 +404,7 @@ object OrderSummary {
 
         val hasActiveSuborder by vm.hasActiveSuborder.collectAsState()
         val total by vm.total
+        val isPaying by gvm.isPaying.collectAsState()
 
         Column(
             modifier = Modifier
@@ -520,6 +526,43 @@ object OrderSummary {
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     )
+                }
+                Spacer(Modifier.height(32.dp))
+                Button(
+                    onClick = {
+                        gvm.pay(
+                            merchantName = gvm.requireOrder.table.restaurant.name,
+                            price = total!!
+                        )
+                    },
+                    enabled = !hasActiveSuborder.dataOr(false),
+                    shape = EdotatTheme.RoundedCornerShape,
+                    modifier = Modifier
+                        .size(200.dp, 56.dp)
+                        .align(Alignment.CenterHorizontally),
+                ) {
+                    if (isPaying) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 3.dp,
+                            color =
+                                if (!hasActiveSuborder.dataOr(false))
+                                    MaterialTheme.colorScheme.onPrimary
+                                else
+                                    ButtonDefaults.buttonColors().disabledContentColor
+                        )
+                    } else {
+                        Icon(
+                            imageVector = EdotatIcons.Pay,
+                            contentDescription = null, // Icon is decorative
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = gvm.app.getString(R.string.order_summary_pay_and_leave),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             } else {
                 Box(

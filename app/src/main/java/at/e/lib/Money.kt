@@ -6,10 +6,16 @@ object Money {
     enum class Currency {
         USD {
             override fun toString(smallestUnitAmount: Int): String {
+                return "\$ ${toDigits(smallestUnitAmount)}"
+            }
+
+            override fun toDigits(smallestUnitAmount: Int): String {
                 val cents = smallestUnitAmount % 100
                 val wholes = smallestUnitAmount / 100
-                return "\$$wholes.${cents.toString().padStart(2, '0')}"
+                return "$wholes.${cents.toString().padStart(2, '0')}"
             }
+
+            override val code = "USD"
         },
         EUR {
             override fun toString(smallestUnitAmount: Int): String {
@@ -17,13 +23,24 @@ object Money {
                 val wholes = smallestUnitAmount / 100
                 return "$wholes,${cents.toString().padStart(2, '0')} €"
             }
+
+            override fun toDigits(smallestUnitAmount: Int): String {
+                val cents = smallestUnitAmount % 100
+                val wholes = smallestUnitAmount / 100
+                return "$wholes.${cents.toString().padStart(2, '0')}"
+            }
+
+            override val code = "EUR"
         },
         ;
         abstract fun toString(smallestUnitAmount: Int): String
+        abstract fun toDigits(smallestUnitAmount: Int): String // No symbols and force . as separator
+        abstract val code: String
     }
 
     data class Amount(val smallestUnitAmount: Int, val currency: Currency) {
         override fun toString() = this.currency.toString(this.smallestUnitAmount)
+        fun toDigits() = this.currency.toDigits(this.smallestUnitAmount)
     }
 }
 

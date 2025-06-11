@@ -2,6 +2,8 @@ package at.e
 
 import android.Manifest.permission
 import android.app.Application
+import android.util.Log
+import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.RequiresPermission
 import androidx.annotation.StringRes
 import androidx.biometric.BiometricManager
@@ -24,6 +26,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
+import at.e.Navigation.ClearBackStack
 import at.e.UserPreferences.Companion.dataStore
 import at.e.api.Account
 import at.e.api.Api
@@ -35,10 +38,19 @@ import at.e.api.Table
 import at.e.api.api
 import at.e.lib.Direction
 import at.e.lib.LoadingState
+import at.e.lib.Money
+import at.e.lib.jsonStringEscapeBasic
 import at.e.ui.home.FindTable
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.Granularity
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.wallet.PaymentData
+import com.google.android.gms.wallet.PaymentDataRequest
+import com.google.android.gms.wallet.Wallet
+import com.google.android.gms.wallet.WalletConstants
+import com.google.android.gms.wallet.contract.ApiTaskResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -88,6 +100,15 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
     val missingLocationPermissions = _missingLocationPermissions.asStateFlow()
 
     private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(app)
+
+    private val paymentsClient = Wallet.getPaymentsClient(app, Wallet.WalletOptions.Builder()
+        .setEnvironment(WalletConstants.ENVIRONMENT_TEST) // We want dummy payments for the time being
+        .build()
+    )
+    lateinit var paymentsLauncher: ActivityResultLauncher<Task<PaymentData>>
+
+    private val _isPaying = MutableStateFlow(false)
+    val isPaying = _isPaying.asStateFlow()
 
     init {
         nc.addOnDestinationChangedListener { _, destination, _ ->
@@ -396,6 +417,61 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
 
     fun consumeMissingLocationPermissions() {
         _missingLocationPermissions.value = false
+    }
+
+    fun pay(merchantName: String, price: Money.Amount) {
+        _isPaying.value = true
+        paymentsClient.loadPaymentData(
+            PaymentDataRequest.fromJson("""
+                {
+                    "apiVersion": 2,
+                    "apiVersionMinor": 0,
+                    "allowedPaymentMethods": [{
+                        "type": "CARD",
+                        "parameters": {
+                            "allowedAuthMethods": ["PAN_ONLY", "CRYPTOGRAM_3DS"],
+                            "allowedCardNetworks": ["VISA", "MASTERCARD", "AMEX", "DISCOVER"]
+                        },
+                        "tokenizationSpecification": {
+                            "type": "PAYMENT_GATEWAY",
+                            "parameters": {
+                                "gateway": "example",
+                                "gatewayMerchantId": "exampleMerchantId"
+                            }
+                        }
+                    }],
+                    "merchantInfo": {
+                        "merchantName": "${jsonStringEscapeBasic(merchantName)}"
+                    },
+                    "transactionInfo": {
+                        "totalPrice": "${price.toDigits()}",
+                        "totalPriceStatus": "FINAL",
+                        "currencyCode": "${price.currency.code}"
+                    }
+                }
+            """.trimIndent()))
+            .addOnCompleteListener(paymentsLauncher::launch)
+    }
+
+    fun notifyPaymentResult(taskResult: ApiTaskResult<PaymentData>, nc: NavController) {
+        _isPaying.value = false
+        when (taskResult.status.statusCode) {
+            CommonStatusCodes.SUCCESS -> {
+                taskResult.result!!.let {
+                    viewModelScope.launch {
+                        requireConnection.endOrder()
+                    }
+                    _orderState.value = OrderState.None
+                    nc.navigate(route = Navigation.Destination.Home.Redirect, ClearBackStack)
+                    nc.navigate(route = Navigation.Destination.RecentOrders)
+                }
+            }
+            CommonStatusCodes.CANCELED -> { }
+            else -> {
+                Log.e("Debugger", "PaymentsClient error: ${taskResult.status} ${taskResult.status.statusMessage}")
+                showSnackbar(R.string.order_summary_payment_failed)
+            }
+        }
     }
 
     class Factory(

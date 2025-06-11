@@ -41,8 +41,8 @@ sealed interface LoadingState<out T> {
         }
 }
 
-inline fun <T> LoadingState<T>.dataOrElse(fallback: () -> T) =
+fun <T> LoadingState<T>.dataOr(default: T) =
     when (this) {
-        is LoadingState.Loading -> fallback()
+        is LoadingState.Loading -> default
         is LoadingState.Data -> this.data
     }
