@@ -184,9 +184,9 @@ class GlobalViewModel(val app: Application, nc: NavController) : ViewModel() {
     }
 
     fun logoutAndDeleteAccount() {
+        _loginState.value = LoginState.LoggedOut
         viewModelScope.launch(Dispatchers.IO) {
             Authentication.logoutAndDeleteAccount(this@GlobalViewModel)
-            _loginState.value = LoginState.LoggedOut
         }
     }
 
